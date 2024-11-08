@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('Detailed API error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch trends data' },
+      { error: error instanceof Error ? error.message : 'Failed to fetch trends data' },
       { status: 500 }
     );
   }

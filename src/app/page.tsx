@@ -4,15 +4,48 @@ import React, { useState } from 'react';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Tooltip as TippyTooltip } from 'react-tippy';
-import 'react-tippy/dist/tippy.css';
+import { useHover, useFloating, offset, shift, useInteractions, FloatingPortal } from '@floating-ui/react';
 import ThemeToggle from '@/components/ThemeToggle';
+import { HealthData } from '@/app/types/api'; // Import HealthData type
+
+function CustomTooltip({ children, content }: { children: React.ReactNode; content: string }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const { refs, floatingStyles, context } = useFloating({
+    open: isOpen,
+    onOpenChange: setIsOpen,
+    middleware: [offset(10), shift()],
+    placement: 'top'
+  });
+
+  const hover = useHover(context);
+  const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
+
+  return (
+    <>
+      <div ref={refs.setReference} {...getReferenceProps()}>
+        {children}
+      </div>
+      {isOpen && (
+        <FloatingPortal>
+          <div
+            ref={refs.setFloating}
+            style={floatingStyles}
+            {...getFloatingProps()}
+            className="bg-gray-900 text-white p-2 rounded text-sm"
+          >
+            {content}
+          </div>
+        </FloatingPortal>
+      )}
+    </>
+  );
+}
 
 export default function BrandHealth() {
   const [term, setTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [healthData, setHealthData] = useState(null);
+  const [healthData, setHealthData] = useState<HealthData | null>(null); // Initialize with HealthData type
   const [darkMode, setDarkMode] = useState(false);
 
   const handleSearch = async () => {
@@ -34,7 +67,8 @@ export default function BrandHealth() {
         throw new Error(data.error || data.message || 'An error occurred');
       }
       
-      setHealthData(data);
+      // Type assertion to ensure data matches HealthData
+      setHealthData(data as HealthData); // Assert that data is of type HealthData
     } catch (err: any) {
       console.error('Search error:', err);
       setError(typeof err === 'string' ? err : err.message || 'An error occurred while fetching data');
@@ -99,46 +133,47 @@ export default function BrandHealth() {
               <div className="space-y-4">
                 <h3 className="font-bold text-gray-900 dark:text-white">Component Scores</h3>
                 <div className="space-y-3">
-                  <TippyTooltip title="Based on Google Trends data">
+                  <CustomTooltip content="Based on Google Trends data">
                     <p className="flex items-center text-gray-700 dark:text-gray-300">
                       🔍 Search Trends: {healthData.scores.searchTrend}%
                       <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
                     </p>
-                  </TippyTooltip>
+                  </CustomTooltip>
 
-                  <TippyTooltip title="Based on Wikipedia page presence">
+                  <CustomTooltip content="Based on Wikipedia page presence">
                     <p className="flex items-center text-gray-700 dark:text-gray-300">
                       📚 Wikipedia: {healthData.scores.wikipedia}%
                       <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
                     </p>
-                  </TippyTooltip>
+                  </CustomTooltip>
 
-                  <TippyTooltip title="Based on DuckDuckGo results">
+                  <CustomTooltip content="Based on DuckDuckGo results">
                     <p className="flex items-center text-gray-700 dark:text-gray-300">
                       🌐 Search Results: {healthData.scores.searchResults}%
                       <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
                     </p>
-                  </TippyTooltip>
+                  </CustomTooltip>
 
-                  <TippyTooltip title="Based on recent news coverage">
+                  <CustomTooltip content="Based on recent news coverage">
                     <p className="flex items-center text-gray-700 dark:text-gray-300">
                       📰 News Coverage: {healthData.scores.newsCoverage}%
                       <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
                     </p>
-                  </TippyTooltip>
+                  </CustomTooltip>
 
-                  <TippyTooltip title="Based on Wikidata presence">
+                  <CustomTooltip content="Based on Wikidata presence">
                     <p className="flex items-center text-gray-700 dark:text-gray-300">
                       🔖 Wikidata: {healthData.scores.wikidata}%
                       <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
                     </p>
-                  </TippyTooltip>
+                  </CustomTooltip>
                 </div>
               </div>
             </div>
 
             {/* Google Trends Chart */}
-            {healthData?.data?.trends?.default?.timelineData?.length > 0 && (
+            {healthData?.data?.trends?.default?.timelineData && 
+             healthData.data.trends.default.timelineData.length > 0 && (
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
                 <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
                   🔍 Google Trends - Search Interest Over Time
@@ -214,7 +249,8 @@ export default function BrandHealth() {
                     <p>No significant search results found.</p>
                   )}
                 </div>
-                {healthData.data.ddg.RelatedTopics?.length > 0 && (
+                {healthData.data.ddg?.RelatedTopics && 
+                 healthData.data.ddg.RelatedTopics.length > 0 && (
                   <div className="mt-4">
                     <h4 className="font-semibold mb-2 text-gray-900 dark:text-white">Related Topics</h4>
                     <ul className="space-y-3">

@@ -31,3 +31,9 @@ body {
     text-wrap: balance;
   }
 }
+
+/* Score Circular Progressbar */
+
+.CircularProgressbar .CircularProgressbar-text {
+  @apply !fill-blue-500 font-bold;
+}
