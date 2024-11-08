@@ -1,113 +1,353 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState } from 'react';
+import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
+import 'react-circular-progressbar/dist/styles.css';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Tooltip as TippyTooltip } from 'react-tippy';
+import 'react-tippy/dist/tippy.css';
+import ThemeToggle from '@/components/ThemeToggle';
+
+export default function BrandHealth() {
+  const [term, setTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [healthData, setHealthData] = useState(null);
+  const [darkMode, setDarkMode] = useState(false);
+
+  const handleSearch = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch('/api/brand-health', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ term })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || data.message || 'An error occurred');
+      }
+      
+      setHealthData(data);
+    } catch (err: any) {
+      console.error('Search error:', err);
+      setError(typeof err === 'string' ? err : err.message || 'An error occurred while fetching data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSearch();
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Brand Health Assessment</h1>
+          <ThemeToggle />
         </div>
+        
+        <form onSubmit={handleSubmit} className="flex gap-4 mb-8">
+          <input
+            type="text"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder="Enter brand name, term, or URL"
+            className="w-full p-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+          >
+            {loading ? 'Analyzing...' : 'Analyze'}
+          </button>
+        </form>
+
+        {error && (
+          <div className="text-red-500 mb-4">{error}</div>
+        )}
+
+        {healthData && (
+          <div className="space-y-8 mt-8">
+            {/* Scores Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* CircularProgressbar */}
+              <div className="w-48 h-48 mx-auto">
+                <CircularProgressbar
+                  value={healthData.scores.overall}
+                  text={`${healthData.scores.overall}%`}
+                  styles={buildStyles({
+                    pathColor: `rgba(79, 70, 229, ${healthData.scores.overall / 100})`,
+                    textColor: darkMode ? '#FFFFFF' : '#1F2937',
+                    trailColor: darkMode ? '#374151' : '#E5E7EB'
+                  })}
+                />
+                <p className="text-center mt-2 font-semibold">Overall Score</p>
+              </div>
+
+              {/* Component Scores */}
+              <div className="space-y-4">
+                <h3 className="font-bold text-gray-900 dark:text-white">Component Scores</h3>
+                <div className="space-y-3">
+                  <TippyTooltip title="Based on Google Trends data">
+                    <p className="flex items-center text-gray-700 dark:text-gray-300">
+                      🔍 Search Trends: {healthData.scores.searchTrend}%
+                      <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
+                    </p>
+                  </TippyTooltip>
+
+                  <TippyTooltip title="Based on Wikipedia page presence">
+                    <p className="flex items-center text-gray-700 dark:text-gray-300">
+                      📚 Wikipedia: {healthData.scores.wikipedia}%
+                      <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
+                    </p>
+                  </TippyTooltip>
+
+                  <TippyTooltip title="Based on DuckDuckGo results">
+                    <p className="flex items-center text-gray-700 dark:text-gray-300">
+                      🌐 Search Results: {healthData.scores.searchResults}%
+                      <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
+                    </p>
+                  </TippyTooltip>
+
+                  <TippyTooltip title="Based on recent news coverage">
+                    <p className="flex items-center text-gray-700 dark:text-gray-300">
+                      📰 News Coverage: {healthData.scores.newsCoverage}%
+                      <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
+                    </p>
+                  </TippyTooltip>
+
+                  <TippyTooltip title="Based on Wikidata presence">
+                    <p className="flex items-center text-gray-700 dark:text-gray-300">
+                      🔖 Wikidata: {healthData.scores.wikidata}%
+                      <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
+                    </p>
+                  </TippyTooltip>
+                </div>
+              </div>
+            </div>
+
+            {/* Google Trends Chart */}
+            {healthData?.data?.trends?.default?.timelineData?.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
+                  🔍 Google Trends - Search Interest Over Time
+                </h3>
+                <div className="h-[400px]">
+                  <ResponsiveContainer>
+                    <LineChart data={healthData.data.trends.default.timelineData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
+                      <XAxis
+                        dataKey="formattedAxisTime"
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                        tick={{ fill: darkMode ? '#9CA3AF' : '#374151' }}
+                      />
+                      <YAxis tick={{ fill: darkMode ? '#9CA3AF' : '#374151' }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: darkMode ? '#1F2937' : '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '0.375rem',
+                          color: darkMode ? '#FFFFFF' : '#000000',
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="value[0]"
+                        stroke="#4F46E5"
+                        strokeWidth={2}
+                        dot={{ fill: '#4F46E5' }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* Wikipedia Information */}
+            {healthData.data.wiki && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
+                  📚 Wikipedia Information
+                </h3>
+                <div className="text-gray-600 dark:text-gray-300">
+                  {healthData.data.wiki.extract || 'No Wikipedia information available.'}
+                </div>
+              </div>
+            )}
+
+            {/* DuckDuckGo Results */}
+            {healthData.data.ddg && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
+                  🌐 DuckDuckGo Search Results
+                </h3>
+                <div className="text-gray-600 dark:text-gray-300">
+                  {healthData.data.ddg.abstract ? (
+                    <div className="mb-4">
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Summary</h4>
+                      <p>{healthData.data.ddg.abstract}</p>
+                      {healthData.data.ddg.AbstractURL && (
+                        <a
+                          href={healthData.data.ddg.AbstractURL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:text-blue-600 mt-2 inline-block"
+                        >
+                          Read more →
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <p>No significant search results found.</p>
+                  )}
+                </div>
+                {healthData.data.ddg.RelatedTopics?.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold mb-2 text-gray-900 dark:text-white">Related Topics</h4>
+                    <ul className="space-y-3">
+                      {healthData.data.ddg.RelatedTopics.slice(0, 5).map((topic, index) => (
+                        <li key={index} className="text-gray-600 dark:text-gray-300">
+                          <div className="flex items-start space-x-3">
+                            {topic.Icon?.URL && (
+                              <img
+                                src={topic.Icon.URL}
+                                alt=""
+                                className="w-8 h-8 object-cover rounded"
+                              />
+                            )}
+                            <div>
+                              <p>{topic.Text}</p>
+                              {topic.FirstURL && (
+                                <a
+                                  href={topic.FirstURL}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-500 hover:text-blue-600 text-sm mt-1 inline-block"
+                                >
+                                  Learn more →
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* News Coverage Section */}
+            {healthData?.data?.news?.articles && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
+                  📰 Recent News Coverage
+                </h3>
+                <div className="space-y-4">
+                  {healthData.data.news.articles.slice(0, 5).map((article, index) => (
+                    <div key={index} className="border-b dark:border-gray-700 last:border-0 pb-4">
+                      <h4 className="font-semibold text-gray-900 dark:text-white">
+                        {article.title}
+                      </h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                        {article.description}
+                      </p>
+                      <div className="flex justify-between items-center mt-2">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {new Date(article.publishedAt).toLocaleDateString()}
+                        </span>
+                        <a
+                          href={article.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:text-blue-600 text-sm"
+                        >
+                          Read more →
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Wikidata Section */}
+            {healthData.data.wikidata && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
+                  🔖 Wikidata Information
+                </h3>
+                <div className="text-gray-600 dark:text-gray-300">
+                  {healthData.data.wikidata.description ? (
+                    <div>
+                      <p className="mb-2"><strong>Description:</strong> {healthData.data.wikidata.description}</p>
+                      {healthData.data.wikidata.aliases && (
+                        <p><strong>Also known as:</strong> {healthData.data.wikidata.aliases.join(', ')}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p>No detailed Wikidata information available.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Data Sources Summary */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+              <h3 className="font-bold mb-4 text-gray-900 dark:text-white">📊 Data Sources Summary</h3>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
+                  <h4 className="font-semibold text-gray-900 dark:text-white">Google Trends</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                    Active search interest detected ({healthData.scores.searchTrend}%)
+                  </p>
+                </div>
+
+                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
+                  <h4 className="font-semibold text-gray-900 dark:text-white">Wikipedia</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                    {healthData.data.wiki ? 'Dedicated page exists' : 'No Wikipedia page found'}
+                  </p>
+                </div>
+
+                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
+                  <h4 className="font-semibold text-gray-900 dark:text-white">DuckDuckGo</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                    {healthData.scores.searchResults > 0 ? 'Search presence detected' : 'No significant results'}
+                  </p>
+                </div>
+
+                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
+                  <h4 className="font-semibold text-gray-900 dark:text-white">News Coverage</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                    {healthData.data.news?.articles?.length || 0} articles found
+                  </p>
+                </div>
+
+                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
+                  <h4 className="font-semibold text-gray-900 dark:text-white">Wikidata</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                    {healthData.data.wikidata ? 'Entity found' : 'No entity found'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    </div>
   );
 }
