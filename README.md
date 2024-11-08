@@ -1,36 +1,129 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Brand Health Assessment Tool
+
+A real-time brand analysis tool that aggregates and visualizes data from multiple sources to provide comprehensive brand health metrics.
+
+## Features
+
+- 📊 Overall brand health score calculation
+- 🔍 Google Trends analysis with historical data visualization
+- 📚 Wikipedia presence and information
+- 🌐 DuckDuckGo search results analysis
+- 📰 Recent news coverage tracking
+- 🔖 Wikidata entity information
+- 🌓 Dark/Light mode support
+- 📱 Responsive design
+
+## Tech Stack
+
+- **Framework**: Next.js 14 (React)
+- **Styling**: Tailwind CSS
+- **Charts**: Recharts, react-circular-progressbar
+- **Tooltips**: react-tippy
+- **API Integration**: Multiple data sources including:
+  - Google Trends API
+  - Wikipedia API
+  - DuckDuckGo API
+  - News API
+  - Wikidata API
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+ 
+- npm or pnpm
+
+### Installation
+
+1. Clone the repository
+2. Install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Using npm
+npm install
+# Using pnpm
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Set up environment variables:
+   - Create a `.env.local` file in the root directory
+   - Add your API keys as follows:
+   ```env
+   NEWS_API_KEY=your_news_api_key
+   GOOGLE_TRENDS_API_KEY=your_google_trends_api_key
+   # Add any other required API keys
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+4. Run the development server:
+   ```bash
+   # Using npm
+   npm run dev
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+   # Using pnpm
+   pnpm dev
+   ```
 
-## Learn More
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-To learn more about Next.js, take a look at the following resources:
+## Usage
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Enter a brand name, term, or URL in the search field
+2. Click "Analyze" to generate a comprehensive brand health report
+3. View various metrics including:
+   - Overall brand health score
+   - Component scores breakdown
+   - Historical search trends
+   - Wikipedia information
+   - News coverage
+   - Search engine presence
+   - Wikidata information
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+## API Endpoints
 
-## Deploy on Vercel
+### POST `/api/brand-health`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Analyzes brand health based on provided term.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+#### Request Body
+```json
+{
+  "scores": {
+    "overall": number,
+    "searchTrend": number,
+    "wikipedia": number,
+    "searchResults": number,
+    "newsCoverage": number,
+    "wikidata": number
+  },
+  "data": {
+    "trends": object,
+    "wiki": object,
+    "ddg": object,
+    "news": object,
+    "wikidata": object
+  }
+}
+```
+
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+MIT License
+
+Copyright (c) 2024 The Grovery
+
+## Acknowledgments
+
+- Built with Next.js
+- Styled with Tailwind CSS
+- Charts powered by Recharts
+- Progress visualization by react-circular-progressbar
+- Tooltips by react-tippy
