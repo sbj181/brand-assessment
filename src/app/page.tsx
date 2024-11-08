@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useHover, useFloating, offset, shift, useInteractions, FloatingPortal } from '@floating-ui/react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { HealthData } from '@/app/types/api'; // Import HealthData type
+import BrandSurvey from '@/app/components/BrandSurvey';
 
 function CustomTooltip({ children, content }: { children: React.ReactNode; content: string }) {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -47,6 +48,8 @@ export default function BrandHealth() {
   const [error, setError] = useState('');
   const [healthData, setHealthData] = useState<HealthData | null>(null); // Initialize with HealthData type
   const [darkMode, setDarkMode] = useState(false);
+  const [surveyEnabled, setSurveyEnabled] = useState(false);
+  const [surveyScore, setSurveyScore] = useState<number | null>(null);
 
   const handleSearch = async () => {
     setLoading(true);
@@ -82,6 +85,17 @@ export default function BrandHealth() {
     handleSearch();
   };
 
+  const calculateOverallScore = (data: HealthData) => {
+    const baseScore = data.scores.overall;
+    if (!surveyEnabled || surveyScore === null) return baseScore;
+    
+    // Adjust these weights based on how much you want the survey to impact the score
+    const SURVEY_WEIGHT = 0.2; // 20% weight to survey
+    const API_WEIGHT = 0.8;    // 80% weight to API data
+    
+    return (baseScore * API_WEIGHT) + (surveyScore * SURVEY_WEIGHT);
+  };
+
   return (
     <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <div className="max-w-6xl mx-auto">
@@ -113,22 +127,38 @@ export default function BrandHealth() {
 
         {healthData && (
           <div className="space-y-8 mt-8">
+            <div className="flex items-center gap-2 mb-4">
+              <label className="text-gray-700 dark:text-gray-300">
+                Enable Survey Component
+              </label>
+              <input
+                type="checkbox"
+                checked={surveyEnabled}
+                onChange={(e) => setSurveyEnabled(e.target.checked)}
+                className="form-checkbox"
+              />
+            </div>
+
+            <BrandSurvey
+              isEnabled={surveyEnabled}
+              onScoreUpdate={(score) => setSurveyScore(score)}
+            />
+
+            <div className="w-48 h-48 mx-auto">
+              <CircularProgressbar
+                value={calculateOverallScore(healthData)}
+                text={`${Math.round(calculateOverallScore(healthData))}%`}
+                styles={buildStyles({
+                  pathColor: `rgba(79, 70, 229, ${calculateOverallScore(healthData) / 100})`,
+                  textColor: darkMode ? '#FFFFFF' : '#1F2937',
+                  trailColor: darkMode ? '#374151' : '#E5E7EB'
+                })}
+              />
+              <p className="text-center mt-2 font-semibold">Overall Score</p>
+            </div>
+
             {/* Scores Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* CircularProgressbar */}
-              <div className="w-48 h-48 mx-auto">
-                <CircularProgressbar
-                  value={healthData.scores.overall}
-                  text={`${healthData.scores.overall}%`}
-                  styles={buildStyles({
-                    pathColor: `rgba(79, 70, 229, ${healthData.scores.overall / 100})`,
-                    textColor: darkMode ? '#FFFFFF' : '#1F2937',
-                    trailColor: darkMode ? '#374151' : '#E5E7EB'
-                  })}
-                />
-                <p className="text-center mt-2 font-semibold">Overall Score</p>
-              </div>
-
               {/* Component Scores */}
               <div className="space-y-4">
                 <h3 className="font-bold text-gray-900 dark:text-white">Component Scores</h3>
