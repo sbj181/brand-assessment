@@ -49,38 +49,99 @@ export default function BrandHealth() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [healthData, setHealthData] = useState<HealthData | null>(null); // Initialize with HealthData type
+  const [scrapedData, setScrapedData] = useState<any>(null);
+
   const [darkMode, setDarkMode] = useState(false);
   const [surveyEnabled, setSurveyEnabled] = useState(false);
   const [surveyScore, setSurveyScore] = useState<number | null>(null);
 
+  const formatTermAsUrl = (input: string) => {
+    const urlPattern = /^(http:\/\/|https:\/\/)/;
+    const domainPattern = /^[\w.-]+\.[a-zA-Z]{2,}$/;
+    
+    // If it looks like a domain but has no scheme, add https://
+    if (!urlPattern.test(input) && domainPattern.test(input)) {
+      return `https://${input}`;
+    }
+    return input;
+  };
+
+  const extractBrandTerm = (url: string, scrapedData: any) => {
+    // First try to get a clean brand name from scraped data
+    if (scrapedData?.title) {
+      // Get the first few words of the title before common separators
+      const titleParts = scrapedData.title.split(/[|\-–—]/)[0].trim();
+      // Remove common company suffixes and clean up
+      return titleParts.replace(/(Inc\.|LLC|Ltd\.|Corporation|Corp\.|Company|Co\.).*$/i, '').trim();
+    }
+    
+    // Fallback to domain extraction
+    try {
+      const domain = url.replace(/^(?:https?:\/\/)?(?:www\.)?/i, "")
+                       .split('/')[0]  // Get domain part
+                       .split('.')[0]; // Get first part of domain
+      return domain;
+    } catch (error) {
+      return url;
+    }
+  };
+
   const handleSearch = async () => {
     setLoading(true);
     setError('');
+    setScrapedData(null);
+    setHealthData(null);
+
+    const formattedTerm = formatTermAsUrl(term);
+    const isUrl = formattedTerm.startsWith('http://') || formattedTerm.startsWith('https://');
+    
     try {
-      const response = await fetch('/api/brand-health', {
+      // Always try to scrape first
+      const scrapeResponse = await fetch('/api/scrape', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
         },
-        body: JSON.stringify({ term })
+        body: JSON.stringify({ url: formattedTerm }),
       });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || data.message || 'An error occurred');
+
+      let scrapedData = null;
+      if (scrapeResponse.ok) {
+        const scrapeResult = await scrapeResponse.json();
+        scrapedData = scrapeResult.data;
+        setScrapedData(scrapedData);
       }
-      
-      // Type assertion to ensure data matches HealthData
-      setHealthData(data as HealthData); // Assert that data is of type HealthData
-    } catch (err: any) {
-      console.error('Search error:', err);
-      setError(typeof err === 'string' ? err : err.message || 'An error occurred while fetching data');
+
+      // For brand health, use scraped title or domain name if it's a URL
+      const brandTerm = isUrl ? extractBrandTerm(formattedTerm, scrapedData) : formattedTerm;
+
+      // Always fetch brand health data
+      const healthResponse = await fetch('/api/brand-health', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ term: brandTerm }),
+      });
+
+      if (healthResponse.ok) {
+        const healthData = await healthResponse.json();
+        setHealthData(healthData as HealthData);
+      } else {
+        const text = await healthResponse.text();
+        throw new Error(`Unexpected response from server: ${text}`);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      setError(typeof err === 'string' ? err : err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
   };
+  
+  
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,8 +194,23 @@ export default function BrandHealth() {
           </button>
         </form>
 
-        {error && (
-          <div className="text-red-500 mb-4">{error}</div>
+        {error && <div className="text-red-500 mb-4">{error}</div>}
+
+        {/* Only show scraped data section after a search attempt */}
+        {term && !loading && (
+          <div className="mt-8 bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Website Data</h2>
+            {scrapedData ? (
+              <div className="text-black dark:text-white">
+                <p><strong>Title:</strong> {scrapedData.title || 'N/A'}</p>
+                <p><strong>Meta Description:</strong> {scrapedData.metaDescription || 'N/A'}</p>
+                <p><strong>OG Title:</strong> {scrapedData.ogTitle || 'N/A'}</p>
+                <p><strong>OG Description:</strong> {scrapedData.ogDescription || 'N/A'}</p>
+              </div>
+            ) : (
+              <p className="text-gray-600 dark:text-gray-400">No website data available</p>
+            )}
+          </div>
         )}
 
         {healthData && (

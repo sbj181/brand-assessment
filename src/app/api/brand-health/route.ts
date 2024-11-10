@@ -69,8 +69,9 @@ async function getWikidata(term: string): Promise<WikidataResult | null> {
       const response = await fetch(
         `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(term)}`
       );
-      if (!response.ok && term.includes(' ')) {
-        return await getWikipediaData('Bristol Myers Squibb');
+      if (!response.ok) {
+        console.error('Wikipedia API error:', await response.text());
+        return null;
       }
       return await response.json();
     } catch (error) {
@@ -84,8 +85,9 @@ async function getWikidata(term: string): Promise<WikidataResult | null> {
       const response = await fetch(
         `https://api.duckduckgo.com/?q=${encodeURIComponent(term)}&format=json&pretty=1`
       );
-      if (!response.ok && term.includes(' ')) {
-        return await getDuckDuckGoData('Bristol Myers Squibb');
+      if (!response.ok) {
+        console.error('DuckDuckGo API error:', await response.text());
+        return null;
       }
       return await response.json();
     } catch (error) {
