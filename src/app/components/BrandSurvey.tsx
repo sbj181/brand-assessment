@@ -105,7 +105,7 @@ export default function BrandSurvey({ onScoreUpdate, isEnabled }: BrandSurveyPro
 
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-      <h3 className="font-bold mb-6 text-gray-900 dark:text-white">
+      <h3 className="font-bold text-xl mb-6 text-gray-900 dark:text-white">
         📋 Brand Assessment Survey
       </h3>
       <div className="space-y-8">

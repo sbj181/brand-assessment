@@ -37,3 +37,7 @@ body {
 .CircularProgressbar .CircularProgressbar-text {
   @apply !fill-blue-500 font-bold;
 }
+
+.recharts-layer text {
+  @apply dark:fill-white dark:opacity-75;
+}

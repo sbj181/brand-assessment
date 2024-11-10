@@ -8,6 +8,8 @@ import { useHover, useFloating, offset, shift, useInteractions, FloatingPortal }
 import ThemeToggle from '@/components/ThemeToggle';
 import { HealthData } from '@/app/types/api'; // Import HealthData type
 import BrandSurvey from '@/app/components/BrandSurvey';
+import { HiSparkles } from 'react-icons/hi';
+import { BiLoaderAlt } from 'react-icons/bi';
 
 function CustomTooltip({ children, content }: { children: React.ReactNode; content: string }) {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -32,7 +34,7 @@ function CustomTooltip({ children, content }: { children: React.ReactNode; conte
             ref={refs.setFloating}
             style={floatingStyles}
             {...getFloatingProps()}
-            className="bg-gray-900 text-white p-2 rounded text-sm"
+            className="bg-gray-900 text-white dark:bg-gray-100 dark:text-black p-2 rounded text-sm"
           >
             {content}
           </div>
@@ -110,14 +112,24 @@ export default function BrandHealth() {
             value={term}
             onChange={(e) => setTerm(e.target.value)}
             placeholder="Enter brand name, term, or URL"
-            className="w-full p-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+            className="w-full p-2 border rounded text-black bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
           />
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+            className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50 flex items-center gap-2"
           >
-            {loading ? 'Analyzing...' : 'Analyze'}
+            {loading ? (
+              <>
+                <BiLoaderAlt className="animate-spin h-5 w-5" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <HiSparkles className="h-5 w-5" />
+                Analyze
+              </>
+            )}
           </button>
         </form>
 
@@ -127,42 +139,58 @@ export default function BrandHealth() {
 
         {healthData && (
           <div className="space-y-8 mt-8">
-            <div className="flex items-center gap-2 mb-4">
-              <label className="text-gray-700 dark:text-gray-300">
-                Enable Survey Component
-              </label>
-              <input
-                type="checkbox"
-                checked={surveyEnabled}
-                onChange={(e) => setSurveyEnabled(e.target.checked)}
-                className="form-checkbox"
-              />
+            <div className="block">
+             {/*  <label className="text-gray-700 dark:text-gray-300">
+                Enable Survey
+              </label> */}
+              <button
+                onClick={() => setSurveyEnabled(!surveyEnabled)}
+                className={`
+                  flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200
+                  ${surveyEnabled 
+                    ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                    : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }
+                `}
+              >
+                <span className={`text-sm font-medium ${surveyEnabled ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                  {surveyEnabled ? 'Survey Enabled' : 'Enable Survey'}
+                </span>
+                <div className={`
+                  w-11 h-6 flex items-center rounded-full p-1
+                  ${surveyEnabled ? 'bg-blue-300' : 'bg-gray-300 dark:bg-gray-800'}
+                `}>
+                  <div className={`
+                    bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200
+                    ${surveyEnabled ? 'translate-x-5' : 'translate-x-0'}
+                  `}></div>
+                </div>
+              </button>
             </div>
 
-            <BrandSurvey
-              isEnabled={surveyEnabled}
-              onScoreUpdate={(score) => setSurveyScore(score)}
-            />
+           
 
-            <div className="w-48 h-48 mx-auto">
-              <CircularProgressbar
-                value={calculateOverallScore(healthData)}
-                text={`${Math.round(calculateOverallScore(healthData))}%`}
-                styles={buildStyles({
-                  pathColor: `rgba(79, 70, 229, ${calculateOverallScore(healthData) / 100})`,
-                  textColor: darkMode ? '#FFFFFF' : '#1F2937',
-                  trailColor: darkMode ? '#374151' : '#E5E7EB'
-                })}
-              />
-              <p className="text-center mt-2 font-semibold">Overall Score</p>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Overall Score - 1/3 column */}
+              <div>
+                <div className="w-48 h-auto mx-auto">
+                  <CircularProgressbar
+                    value={calculateOverallScore(healthData)}
+                    text={`${Math.round(calculateOverallScore(healthData))}%`}
+                    styles={buildStyles({
+                      pathColor: `rgba(79, 70, 229, ${calculateOverallScore(healthData) / 100})`,
+                      textColor: darkMode ? '#FFFFFF' : '#1F2937',
+                      trailColor: darkMode ? '#374151' : '#E5E7EB'
+                    })}
+                  />
+                  <p className="text-center mt-2 font-semibold">Overall Score</p>
+                </div>
+              </div>
 
-            {/* Scores Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Component Scores */}
-              <div className="space-y-4">
-                <h3 className="font-bold text-gray-900 dark:text-white">Component Scores</h3>
-                <div className="space-y-3">
+              {/* Component Scores - 2/3 column */}
+              <div className="md:col-span-2">
+                <h3 className="font-bold text-gray-900 dark:text-white mb-4">Component Scores</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <CustomTooltip content="Based on Google Trends data">
                     <p className="flex items-center text-gray-700 dark:text-gray-300">
                       🔍 Search Trends: {healthData.scores.searchTrend}%
@@ -197,9 +225,23 @@ export default function BrandHealth() {
                       <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
                     </p>
                   </CustomTooltip>
+
+                  {surveyEnabled && (
+                    <CustomTooltip content="Based on manual brand assessment responses">
+                      <p className="flex items-center text-gray-700 dark:text-gray-300">
+                        📊 Survey Data: {Math.round(surveyScore ?? 0)}%
+                        <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
+                      </p>
+                    </CustomTooltip>
+                  )}
                 </div>
               </div>
             </div>
+
+            <BrandSurvey
+              isEnabled={surveyEnabled}
+              onScoreUpdate={(score) => setSurveyScore(score)}
+            />
 
             {/* Google Trends Chart */}
             {healthData?.data?.trends?.default?.timelineData && 
