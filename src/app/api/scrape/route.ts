@@ -14,12 +14,19 @@ async function scrapeWebsite(url: string) {
     const title = $('title').text();
     const ogTitle = $('meta[property="og:title"]').attr('content') || '';
     const ogDescription = $('meta[property="og:description"]').attr('content') || '';
+    const metaImage = $('meta[property="og:image"]').attr('content') || 
+                      $('meta[name="twitter:image"]').attr('content') || 
+                      $('meta[property="image"]').attr('content');
+    const favicon = $('link[rel="icon"]').attr('href') ||
+                    $('link[rel="shortcut icon"]').attr('href');
 
     return {
       title,
       metaDescription,
       ogTitle,
       ogDescription,
+      metaImage: metaImage || null,
+      favicon: favicon || null
     };
   } catch (error) {
     console.error('Error scraping website:', error);

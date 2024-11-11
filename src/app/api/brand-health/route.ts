@@ -22,6 +22,11 @@ interface GoogleSearchScore {
   totalResults: number;
   exactMatches: number;
   authorityScore: number;
+  items?: Array<{
+    title: string;
+    link: string;
+    snippet: string;
+  }>;
 }
 
 const fetchGoogleResults = async (query: string): Promise<GoogleSearchScore> => {
@@ -32,12 +37,17 @@ const fetchGoogleResults = async (query: string): Promise<GoogleSearchScore> => 
     // Clean the query and add brand-specific terms
     const cleanQuery = query.trim().replace(/,+$/, '');
 
-    // Add exclusions for residential/real estate terms when the query contains "home"
-    const exclusions = cleanQuery.toLowerCase().includes('home') ? 
-    '-real -estate -apartment -house -residential -zillow -redfin -trulia' : '';
+    // Add exclusions based on the query
+    let exclusions = '';
+    if (cleanQuery.toLowerCase().includes('home')) {
+      exclusions = '-real -estate -apartment -house -residential -zillow -redfin -trulia';
+    } else if (cleanQuery.toLowerCase() === 'apple') {
+      exclusions = '-fruit -tree -recipe -food -orchard -pie -cider';
+    }
+    // Add more specific cases as needed
 
-    // Add search operators to focus on company/brand results
-    const enhancedQuery = `"${cleanQuery}" (company OR brand OR business OR corporation OR enterprise) ${exclusions}`;
+    // Enhanced query with more specific company identifiers
+    const enhancedQuery = `"${cleanQuery}" (company OR brand OR "Inc." OR "Corp." OR "LLC" OR "Ltd." OR "technology company" OR "official website" OR headquarters OR CEO) ${exclusions}`;
     
     const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(enhancedQuery)}&key=${apiKey}&cx=${cx}&num=10`;
     
@@ -97,7 +107,8 @@ const fetchGoogleResults = async (query: string): Promise<GoogleSearchScore> => 
       score,
       totalResults: parseInt(data.searchInformation?.totalResults || '0'),
       exactMatches,
-      authorityScore
+      authorityScore,
+      items: data.items
     };
   } catch (error) {
     console.error('Google Search API error:', error);
@@ -105,7 +116,8 @@ const fetchGoogleResults = async (query: string): Promise<GoogleSearchScore> => 
       score: 0,
       totalResults: 0,
       exactMatches: 0,
-      authorityScore: 0
+      authorityScore: 0,
+      items: []
     };
   }
 };
@@ -157,13 +169,25 @@ async function getWikidata(term: string): Promise<WikidataResult | null> {
 
   async function getWikipediaData(term: string): Promise<WikiData | null> {
     try {
+      // Add generic company suffix to improve company-related matches
+      const searchTerm = `${term}_(company)`;
+      
       const response = await fetch(
-        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(term)}`
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchTerm)}`
       );
+      
+      // If company suffix fails, try the original term
       if (!response.ok) {
-        console.error('Wikipedia API error:', await response.text());
-        return null;
+        const fallbackResponse = await fetch(
+          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(term)}`
+        );
+        if (!fallbackResponse.ok) {
+          console.error('Wikipedia API error:', await fallbackResponse.text());
+          return null;
+        }
+        return await fallbackResponse.json();
       }
+      
       return await response.json();
     } catch (error) {
       console.error('Wikipedia error:', error);
@@ -260,6 +284,7 @@ async function getWikidata(term: string): Promise<WikidataResult | null> {
             ddg: ddgData,
             news: newsData,
             wikidata: wikidataData,
+            google: googleData,
             term
           }
         }),

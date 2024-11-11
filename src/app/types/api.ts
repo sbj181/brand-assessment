@@ -15,7 +15,18 @@ export interface DuckDuckGoData {
 }
 
 export interface NewsData {
-  articles?: any[];
+  status: string;
+  totalResults: number;
+  articles: Array<{
+    source: any;
+    author: string | null;
+    title: string;
+    description: string;
+    url: string;
+    urlToImage: string | null;
+    publishedAt: string;
+    content: string;
+  }>;
 }
 
 export interface WikidataResult {
@@ -48,9 +59,7 @@ export interface HealthData {
         AbstractURL?: string;
         RelatedTopics?: Array<{ Icon?: { URL: string }; Text: string; FirstURL?: string }>;
       };
-      news?: {
-        articles: Array<{ title: string; description: string; publishedAt: string; url: string }>;
-      };
+      news?: NewsData;
       wikidata?: {
         description?: string;
         aliases?: string[];

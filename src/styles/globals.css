@@ -35,7 +35,8 @@ body {
 /* Score Circular Progressbar */
 
 .CircularProgressbar .CircularProgressbar-text {
-  @apply !fill-blue-500 font-bold;
+  /* @apply !fill-blue-500 font-bold; */
+  @apply dark:!fill-white;
 }
 
 .recharts-layer text,.recharts-responsive-container text {

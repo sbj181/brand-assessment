@@ -204,22 +204,7 @@ export default function BrandHealth() {
 
         {error && <div className="text-red-500 mb-4">{error}</div>}
 
-        {/* Only show scraped data section after a search attempt */}
-        {term && !loading && (
-          <div className="mt-8 bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Website Data</h2>
-            {scrapedData ? (
-              <div className="text-black dark:text-white">
-                <p><strong>Title:</strong> {scrapedData.title || 'N/A'}</p>
-                <p><strong>Meta Description:</strong> {scrapedData.metaDescription || 'N/A'}</p>
-                <p><strong>OG Title:</strong> {scrapedData.ogTitle || 'N/A'}</p>
-                <p><strong>OG Description:</strong> {scrapedData.ogDescription || 'N/A'}</p>
-              </div>
-            ) : (
-              <p className="text-gray-600 dark:text-gray-400">No website data available</p>
-            )}
-          </div>
-        )}
+        
 
         {healthData && (
           <div className="space-y-8 mt-8">
@@ -238,7 +223,7 @@ export default function BrandHealth() {
                 `}
               >
                 <span className={`text-sm font-medium ${surveyEnabled ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>
-                  {surveyEnabled ? 'Survey Enabled' : 'Enable Survey'}
+                  {surveyEnabled ? 'Manual Survey Enabled' : 'Include Manual Survey'}
                 </span>
                 <div className={`
                   w-11 h-6 flex items-center rounded-full p-1
@@ -262,12 +247,14 @@ export default function BrandHealth() {
                     value={calculateOverallScore(healthData)}
                     text={`${Math.round(calculateOverallScore(healthData))}%`}
                     styles={buildStyles({
-                      pathColor: `rgba(79, 70, 229, ${calculateOverallScore(healthData) / 100})`,
+                      pathColor: darkMode 
+                        ? `rgba(147, 197, 253, ${calculateOverallScore(healthData) / 100})` // Light blue in dark mode
+                        : `rgba(79, 70, 229, ${calculateOverallScore(healthData) / 100})`,  // Original color in light mode
                       textColor: darkMode ? '#FFFFFF' : '#1F2937',
                       trailColor: darkMode ? '#374151' : '#E5E7EB'
                     })}
                   />
-                  <p className="text-center mt-2 font-semibold">Overall Score</p>
+                  <p className="text-center mt-2 dark:text-white font-semibold">Overall Score</p>
                 </div>
               </div>
 
@@ -329,6 +316,36 @@ export default function BrandHealth() {
               </div>
             </div>
 
+            
+
+            {/* Website Data Section */}
+            {scrapedData && (
+              <div className="mt-8 bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow">
+                <div className="text-black dark:text-white space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {scrapedData.metaImage && (
+                      <div className="mb-4 md:mb-0">
+                        <img 
+                          src={scrapedData.metaImage} 
+                          alt="Site Preview"
+                          className="max-w-full h-auto rounded-lg shadow"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                    <div className="md:col-span-3">
+                      <h2 className="text-lg font-bold mb-2 text-gray-900 dark:text-white">Website Data</h2>
+                      <p><strong>Title:</strong> {scrapedData.ogTitle || 'N/A'}</p>
+                      <p><strong>Description:</strong> {scrapedData.ogDescription || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Survey Section */}
             <BrandSurvey
               isEnabled={surveyEnabled}
               onScoreUpdate={(score) => setSurveyScore(score)}
@@ -373,6 +390,42 @@ export default function BrandHealth() {
                 </div>
               </div>
             )}
+
+            {/* Brand Health Metrics */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+              <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
+                📊 Brand Health Metrics
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {[
+                  { subject: 'Overall Health', score: healthData.scores.overall, color: '#4F46E5' },
+                  { subject: 'Search Trends', score: healthData.scores.searchTrend, color: '#10B981' },
+                  { subject: 'Wikipedia', score: healthData.scores.wikipedia, color: '#F59E0B' },
+                  { subject: 'Search Results', score: healthData.scores.searchResults, color: '#EC4899' },
+                  { subject: 'News Coverage', score: healthData.scores.newsCoverage, color: '#6366F1' },
+                  { subject: 'Wikidata', score: healthData.scores.wikidata, color: '#8B5CF6' },
+                  { subject: 'Google Presence', score: healthData.scores.googlePresence, color: '#2563EB' },
+                  ...(surveyEnabled && surveyScore !== null ? [
+                    { subject: 'Survey Score', score: Math.round(surveyScore), color: '#DC2626' }
+                  ] : [])
+                ].map((metric) => (
+                  <div key={metric.subject} className="text-center">
+                    <div className="w-32 h-32 mx-auto">
+                      <CircularProgressbar
+                        value={metric.score}
+                        text={`${metric.score}%`}
+                        styles={buildStyles({
+                          pathColor: metric.color,
+                          textColor: darkMode ? '#FFFFFF' : '#1F2937',
+                          trailColor: darkMode ? '#374151' : '#E5E7EB'
+                        })}
+                      />
+                    </div>
+                    <p className="mt-2 font-medium text-gray-900 dark:text-white">{metric.subject}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* Wikipedia Information */}
             {healthData.data.wiki && (
@@ -545,153 +598,43 @@ export default function BrandHealth() {
               </div>
             </div>
 
-            {/* <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
-                📊 Brand Health Radar
-              </h3>
-              <div className="h-[400px]">
-                <ResponsiveContainer>
-                  <RadarChart data={[
-                    {
-                      subject: 'Search Trends',
-                      score: healthData.scores.searchTrend,
-                    },
-                    {
-                      subject: 'Wikipedia',
-                      score: healthData.scores.wikipedia,
-                    },
-                    {
-                      subject: 'Search Results',
-                      score: healthData.scores.searchResults,
-                    },
-                    {
-                      subject: 'News Coverage',
-                      score: healthData.scores.newsCoverage,
-                    },
-                    {
-                      subject: 'Wikidata',
-                      score: healthData.scores.wikidata,
-                    },
-                    {
-                      subject: 'Google Presence',
-                      score: healthData.scores.googlePresence,
-                    },
-                  ]}>
-                    <PolarGrid stroke={darkMode ? '#374151' : '#E5E7EB'} />
-                    <PolarAngleAxis 
-                      dataKey="subject" 
-                      tick={{ fill: darkMode ? '#9CA3AF' : '#374151' }}
-                    />
-                    <PolarRadiusAxis 
-                      angle={30} 
-                      domain={[0, 100]}
-                      tick={{ fill: darkMode ? '#9CA3AF' : '#374151' }}
-                    />
-                    <Radar
-                      name="Score"
-                      dataKey="score"
-                      stroke="#4F46E5"
-                      fill="#4F46E5"
-                      fillOpacity={0.6}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
-            </div> */}
-
-            {/* Add this after your other visualization components */}
+            {/* Search Results Section */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow mt-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-gray-900 dark:text-white">
-                  🔍 Search Results Debug
-                </h3>
-                {/* Optional: Add a collapse/expand button */}
-              </div>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-4">
+                🔍 Top Search Results
+              </h3>
               
               {/* Google Results */}
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">Top Google Result:</h4>
-                {healthData.data?.google?.items?.[0] && (
+              {healthData.data?.google?.items?.[0] && (
+                <div className="mb-6">
+                  <h4 className="font-semibold dark:text-white mb-2">Google Top Result:</h4>
                   <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
-                    <p className="font-medium">{healthData.data.google.items[0].title}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <p className="font-medium dark:text-white">{healthData.data.google.items[0].title}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
                       {healthData.data.google.items[0].snippet}
                     </p>
                     <a href={healthData.data.google.items[0].link} 
-                       className="text-blue-600 dark:text-blue-400 text-sm hover:underline"
+                       className="text-blue-600 dark:text-blue-400 text-sm hover:underline mt-2 inline-block"
                        target="_blank"
                        rel="noopener noreferrer">
-                      {healthData.data.google.items[0].link}
+                      Visit Site →
                     </a>
                   </div>
-                )}
-              </div>
-
-              {/* News Results */}
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">Latest News:</h4>
-                <div className="space-y-3">
-                  {healthData.data?.news?.articles?.slice(0, 3).map((article, i) => (
-                    <div key={i} className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
-                      <p className="font-medium">{article.title}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        {article.description}
-                      </p>
-                      <div className="flex justify-between text-sm mt-2">
-                        <span className="text-gray-500">{new Date(article.publishedAt).toLocaleDateString()}</span>
-                        <a href={article.url} 
-                           className="text-blue-600 dark:text-blue-400 hover:underline"
-                           target="_blank"
-                           rel="noopener noreferrer">
-                          Read More →
-                        </a>
-                      </div>
-                    </div>
-                  ))}
                 </div>
-              </div>
+              )}
 
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
-                📊 Brand Health Metrics
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {[
-                  { subject: 'Overall Health', score: healthData.scores.overall, color: '#4F46E5' },
-                  { subject: 'Search Trends', score: healthData.scores.searchTrend, color: '#10B981' },
-                  { subject: 'Wikipedia', score: healthData.scores.wikipedia, color: '#F59E0B' },
-                  { subject: 'Search Results', score: healthData.scores.searchResults, color: '#EC4899' },
-                  { subject: 'News Coverage', score: healthData.scores.newsCoverage, color: '#6366F1' },
-                  { subject: 'Wikidata', score: healthData.scores.wikidata, color: '#8B5CF6' },
-                  { subject: 'Google Presence', score: healthData.scores.googlePresence, color: '#2563EB' },
-                  ...(surveyEnabled && surveyScore !== null ? [
-                    { subject: 'Survey Score', score: Math.round(surveyScore), color: '#DC2626' }
-                  ] : [])
-                ].map((metric) => (
-                  <div key={metric.subject} className="text-center">
-                    <div className="w-32 h-32 mx-auto">
-                      <CircularProgressbar
-                        value={metric.score}
-                        text={`${metric.score}%`}
-                        styles={buildStyles({
-                          pathColor: metric.color,
-                          textColor: darkMode ? '#FFFFFF' : '#1F2937',
-                          trailColor: darkMode ? '#374151' : '#E5E7EB'
-                        })}
-                      />
-                    </div>
-                    <p className="mt-2 font-medium text-gray-900 dark:text-white">{metric.subject}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+              
 
-              {/* Raw Scores */}
-              <div>
-                <h4 className="font-semibold mb-2">Score Breakdown:</h4>
-                <pre className="bg-gray-50 dark:bg-gray-700 p-4 rounded overflow-auto">
-                  {JSON.stringify(healthData.scores, null, 2)}
-                </pre>
+              {/* Raw Scores - Optional, could be hidden behind a "Debug" button */}
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
+                <details>
+                  <summary className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-white">
+                    Show Score Details
+                  </summary>
+                  <pre className="mt-2 bg-gray-50 dark:bg-gray-700 p-4 rounded overflow-auto text-sm">
+                    {JSON.stringify(healthData.scores, null, 2)}
+                  </pre>
+                </details>
               </div>
             </div>
           </div>
