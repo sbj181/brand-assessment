@@ -17,16 +17,107 @@ async function getTrendsData(term: string): Promise<TrendsData | null> {
   }
 }
 
+interface GoogleSearchScore {
+  score: number;
+  totalResults: number;
+  exactMatches: number;
+  authorityScore: number;
+}
+
+const fetchGoogleResults = async (query: string): Promise<GoogleSearchScore> => {
+  try {
+    const apiKey = process.env.GOOGLE_API_KEY;
+    const cx = process.env.GOOGLE_CSE_ID;
+    
+    // Clean the query and add brand-specific terms
+    const cleanQuery = query.trim().replace(/,+$/, '');
+
+    // Add exclusions for residential/real estate terms when the query contains "home"
+    const exclusions = cleanQuery.toLowerCase().includes('home') ? 
+    '-real -estate -apartment -house -residential -zillow -redfin -trulia' : '';
+
+    // Add search operators to focus on company/brand results
+    const enhancedQuery = `"${cleanQuery}" (company OR brand OR business OR corporation OR enterprise) ${exclusions}`;
+    
+    const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(enhancedQuery)}&key=${apiKey}&cx=${cx}&num=10`;
+    
+    console.log('Search URL:', url.replace(apiKey!, '[REDACTED]'));
+    
+    const response = await fetch(url);
+    console.log('Response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Google API Error:', errorText);
+      throw new Error('Google Search API request failed');
+    }
+
+    const data = await response.json();
+    console.log('Search results:', {
+      totalResults: data.searchInformation?.totalResults,
+      itemsCount: data.items?.length,
+      firstResult: data.items?.[0]
+    });
+    
+    // Initialize scoring variables
+    let exactMatches = 0;
+    let authorityScore = 0;
+    const authorityDomains = [
+      '.gov', '.edu', '.org', 
+      'wikipedia.org', 'linkedin.com', 
+      'bloomberg.com', 'reuters.com'
+    ];
+
+    // Analyze each result
+    data.items?.forEach((item: any) => {
+      // Check for exact matches in title or snippet
+      const titleMatch = item.title.toLowerCase().includes(query.toLowerCase());
+      const snippetMatch = item.snippet?.toLowerCase().includes(query.toLowerCase());
+      if (titleMatch || snippetMatch) exactMatches++;
+
+      // Check for authority domains
+      if (authorityDomains.some(domain => item.link.includes(domain))) {
+        authorityScore += 10;
+      }
+
+      // Additional points for official website
+      if (item.link.includes(query.toLowerCase())) {
+        authorityScore += 20;
+      }
+    });
+
+    // Calculate final score (0-100)
+    const score = Math.min(100, Math.round(
+      (exactMatches * 10) +  // Up to 100 points for exact matches
+      (authorityScore) +     // Points for authority sites
+      (data.searchInformation?.totalResults > 1000 ? 20 : 0)  // Bonus for high total results
+    ));
+
+    return {
+      score,
+      totalResults: parseInt(data.searchInformation?.totalResults || '0'),
+      exactMatches,
+      authorityScore
+    };
+  } catch (error) {
+    console.error('Google Search API error:', error);
+    return {
+      score: 0,
+      totalResults: 0,
+      exactMatches: 0,
+      authorityScore: 0
+    };
+  }
+};
+
 async function getNewsData(term: string): Promise<NewsData | null> {
     try {
     console.log('Fetching news for term:', term);
     
-    const url = `https://newsapi.org/v2/everything?` +
-      `q=${encodeURIComponent(term)}` +
-      `&apiKey=${process.env.NEWS_API_KEY}` +
-      `&language=en` +
-      `&sortBy=relevancy` +
-      `&pageSize=10`;
+    const cleanTerm = term.trim().replace(/,+$/, '');
+    const exactTerm = `"${cleanTerm}"`;
+    
+    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(exactTerm)}&apiKey=${process.env.NEWS_API_KEY}&language=en&sortBy=relevancy&pageSize=10`;
     
     console.log('News API URL:', url.replace(process.env.NEWS_API_KEY!, '[REDACTED]'));
     
@@ -103,7 +194,8 @@ async function getWikidata(term: string): Promise<WikidataResult | null> {
     wikiData: WikiData | null,
     ddgData: DuckDuckGoData | null,
     newsData: NewsData | null,
-    wikidataData: WikidataResult | null
+    wikidataData: WikidataResult | null,
+    googleData: GoogleSearchScore | null
   ): Scores {
     const trendScore = trendsData?.default?.timelineData?.length ? 
       trendsData.default.timelineData.reduce(
@@ -120,13 +212,18 @@ async function getWikidata(term: string): Promise<WikidataResult | null> {
   
     const wikidataScore = wikidataData ? 80 : 0; // Assign a fixed score if Wikidata entry exists
   
+    const googleScore = googleData ? Math.min(100, googleData.score) : 0;
+
     return {
       searchTrend: Math.round(trendScore) || 0,
       wikipedia: Math.round(wikiScore) || 0,
       searchResults: Math.round(ddgScore) || 0,
       newsCoverage: Math.round(newsScore) || 0,
       wikidata: wikidataScore,
-      overall: Math.round((trendScore + wikiScore + ddgScore + newsScore + wikidataScore) / 5) || 0
+      googlePresence: googleScore, // New score
+      overall: Math.round(
+        (trendScore + wikiScore + ddgScore + newsScore + wikidataScore + googleScore) / 6
+      ) || 0
     };
   }
   
@@ -139,17 +236,18 @@ async function getWikidata(term: string): Promise<WikidataResult | null> {
       console.log('NEWS_API_KEY exists:', !!process.env.NEWS_API_KEY);
   
       // Fetch data from all sources concurrently
-      const [trendsData, wikiData, ddgData, newsData, wikidataData] = await Promise.all([
+      const [trendsData, wikiData, ddgData, newsData, wikidataData, googleData] = await Promise.all([
         getTrendsData(term),
         getWikipediaData(term),
         getDuckDuckGoData(term),
         getNewsData(term),
-        getWikidata(term)
+        getWikidata(term),
+        fetchGoogleResults(term)
       ]);
   
       console.log('News Data received:', newsData); // Debug log
   
-      const scores = calculateScores(trendsData, wikiData, ddgData, newsData, wikidataData);
+      const scores = calculateScores(trendsData, wikiData, ddgData, newsData, wikidataData, googleData);
       console.log('Calculated scores:', scores); // Debug log
   
       return new NextResponse(

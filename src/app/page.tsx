@@ -10,6 +10,8 @@ import { HealthData } from '@/app/types/api'; // Import HealthData type
 import BrandSurvey from '@/app/components/BrandSurvey';
 import { HiSparkles } from 'react-icons/hi';
 import { BiLoaderAlt } from 'react-icons/bi';
+// import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import GaugeChart from 'react-gauge-chart';
 
 function CustomTooltip({ children, content }: { children: React.ReactNode; content: string }) {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -302,6 +304,13 @@ export default function BrandHealth() {
                     </p>
                   </CustomTooltip>
 
+                  <CustomTooltip content="Based on Google search presence">
+                    <p className="flex items-center text-gray-700 dark:text-gray-300">
+                      🔍 Google Presence: {healthData.scores.googlePresence}%
+                      <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
+                    </p>
+                  </CustomTooltip>
+
                   {surveyEnabled && (
                     <CustomTooltip content="Based on manual brand assessment responses">
                       <p className="flex items-center text-gray-700 dark:text-gray-300">
@@ -527,6 +536,158 @@ export default function BrandHealth() {
                     {healthData.data.wikidata ? 'Entity found' : 'No entity found'}
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {/* <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+              <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
+                📊 Brand Health Radar
+              </h3>
+              <div className="h-[400px]">
+                <ResponsiveContainer>
+                  <RadarChart data={[
+                    {
+                      subject: 'Search Trends',
+                      score: healthData.scores.searchTrend,
+                    },
+                    {
+                      subject: 'Wikipedia',
+                      score: healthData.scores.wikipedia,
+                    },
+                    {
+                      subject: 'Search Results',
+                      score: healthData.scores.searchResults,
+                    },
+                    {
+                      subject: 'News Coverage',
+                      score: healthData.scores.newsCoverage,
+                    },
+                    {
+                      subject: 'Wikidata',
+                      score: healthData.scores.wikidata,
+                    },
+                    {
+                      subject: 'Google Presence',
+                      score: healthData.scores.googlePresence,
+                    },
+                  ]}>
+                    <PolarGrid stroke={darkMode ? '#374151' : '#E5E7EB'} />
+                    <PolarAngleAxis 
+                      dataKey="subject" 
+                      tick={{ fill: darkMode ? '#9CA3AF' : '#374151' }}
+                    />
+                    <PolarRadiusAxis 
+                      angle={30} 
+                      domain={[0, 100]}
+                      tick={{ fill: darkMode ? '#9CA3AF' : '#374151' }}
+                    />
+                    <Radar
+                      name="Score"
+                      dataKey="score"
+                      stroke="#4F46E5"
+                      fill="#4F46E5"
+                      fillOpacity={0.6}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </div> */}
+
+            {/* Add this after your other visualization components */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow mt-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-gray-900 dark:text-white">
+                  🔍 Search Results Debug
+                </h3>
+                {/* Optional: Add a collapse/expand button */}
+              </div>
+              
+              {/* Google Results */}
+              <div className="mb-4">
+                <h4 className="font-semibold mb-2">Top Google Result:</h4>
+                {healthData.data?.google?.items?.[0] && (
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
+                    <p className="font-medium">{healthData.data.google.items[0].title}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      {healthData.data.google.items[0].snippet}
+                    </p>
+                    <a href={healthData.data.google.items[0].link} 
+                       className="text-blue-600 dark:text-blue-400 text-sm hover:underline"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                      {healthData.data.google.items[0].link}
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* News Results */}
+              <div className="mb-4">
+                <h4 className="font-semibold mb-2">Latest News:</h4>
+                <div className="space-y-3">
+                  {healthData.data?.news?.articles?.slice(0, 3).map((article, i) => (
+                    <div key={i} className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
+                      <p className="font-medium">{article.title}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        {article.description}
+                      </p>
+                      <div className="flex justify-between text-sm mt-2">
+                        <span className="text-gray-500">{new Date(article.publishedAt).toLocaleDateString()}</span>
+                        <a href={article.url} 
+                           className="text-blue-600 dark:text-blue-400 hover:underline"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                          Read More →
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+              <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
+                📊 Brand Health Metrics
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {[
+                  { subject: 'Overall Health', score: healthData.scores.overall, color: '#4F46E5' },
+                  { subject: 'Search Trends', score: healthData.scores.searchTrend, color: '#10B981' },
+                  { subject: 'Wikipedia', score: healthData.scores.wikipedia, color: '#F59E0B' },
+                  { subject: 'Search Results', score: healthData.scores.searchResults, color: '#EC4899' },
+                  { subject: 'News Coverage', score: healthData.scores.newsCoverage, color: '#6366F1' },
+                  { subject: 'Wikidata', score: healthData.scores.wikidata, color: '#8B5CF6' },
+                  { subject: 'Google Presence', score: healthData.scores.googlePresence, color: '#2563EB' },
+                  ...(surveyEnabled && surveyScore !== null ? [
+                    { subject: 'Survey Score', score: surveyScore, color: '#DC2626' }
+                  ] : [])
+                ].map((metric) => (
+                  <div key={metric.subject} className="text-center">
+                    <ResponsiveContainer width="100%" height={100}>
+                      <GaugeChart 
+                        id={`gauge-${metric.subject}`}
+                        nrOfLevels={20}
+                        colors={['#EF4444', '#F59E0B', '#10B981']}
+                        percent={metric.score / 100}
+                        textColor={darkMode ? '#9CA3AF' : '#374151'}
+                        needleColor={darkMode ? '#4B5563' : '#9CA3AF'}
+                        needleBaseColor={darkMode ? '#4B5563' : '#9CA3AF'}
+                        animate={true}
+                      />
+                    </ResponsiveContainer>
+                    <p className="mt-2 font-medium text-gray-900 dark:text-white">{metric.subject}</p>
+                    {/* <p className="text-2xl font-bold" style={{ color: metric.color }}>{metric.score}%</p> */}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+              {/* Raw Scores */}
+              <div>
+                <h4 className="font-semibold mb-2">Score Breakdown:</h4>
+                <pre className="bg-gray-50 dark:bg-gray-700 p-4 rounded overflow-auto">
+                  {JSON.stringify(healthData.scores, null, 2)}
+                </pre>
               </div>
             </div>
           </div>

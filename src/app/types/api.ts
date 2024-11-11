@@ -29,6 +29,7 @@ export interface Scores {
   searchResults: number;
   newsCoverage: number;
   wikidata: number;
+  googlePresence: number;
 }
 
 export interface HealthData {

@@ -38,6 +38,6 @@ body {
   @apply !fill-blue-500 font-bold;
 }
 
-.recharts-layer text {
+.recharts-layer text,.recharts-responsive-container text {
   @apply dark:fill-white dark:opacity-75;
 }
