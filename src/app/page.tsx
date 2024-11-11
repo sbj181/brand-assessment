@@ -659,24 +659,22 @@ export default function BrandHealth() {
                   { subject: 'Wikidata', score: healthData.scores.wikidata, color: '#8B5CF6' },
                   { subject: 'Google Presence', score: healthData.scores.googlePresence, color: '#2563EB' },
                   ...(surveyEnabled && surveyScore !== null ? [
-                    { subject: 'Survey Score', score: surveyScore, color: '#DC2626' }
+                    { subject: 'Survey Score', score: Math.round(surveyScore), color: '#DC2626' }
                   ] : [])
                 ].map((metric) => (
                   <div key={metric.subject} className="text-center">
-                    <ResponsiveContainer width="100%" height={100}>
-                      <GaugeChart 
-                        id={`gauge-${metric.subject}`}
-                        nrOfLevels={20}
-                        colors={['#EF4444', '#F59E0B', '#10B981']}
-                        percent={metric.score / 100}
-                        textColor={darkMode ? '#9CA3AF' : '#374151'}
-                        needleColor={darkMode ? '#4B5563' : '#9CA3AF'}
-                        needleBaseColor={darkMode ? '#4B5563' : '#9CA3AF'}
-                        animate={true}
+                    <div className="w-32 h-32 mx-auto">
+                      <CircularProgressbar
+                        value={metric.score}
+                        text={`${metric.score}%`}
+                        styles={buildStyles({
+                          pathColor: metric.color,
+                          textColor: darkMode ? '#FFFFFF' : '#1F2937',
+                          trailColor: darkMode ? '#374151' : '#E5E7EB'
+                        })}
                       />
-                    </ResponsiveContainer>
+                    </div>
                     <p className="mt-2 font-medium text-gray-900 dark:text-white">{metric.subject}</p>
-                    {/* <p className="text-2xl font-bold" style={{ color: metric.color }}>{metric.score}%</p> */}
                   </div>
                 ))}
               </div>
