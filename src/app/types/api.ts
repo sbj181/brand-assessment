@@ -55,6 +55,9 @@ export interface HealthData {
         description?: string;
         aliases?: string[];
       };
+      google?: {
+        items: Array<{ title: string; snippet: string; link: string }>; // Add google results structure
+      };
     };
   }
   

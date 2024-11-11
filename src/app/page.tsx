@@ -10,8 +10,8 @@ import { HealthData } from '@/app/types/api'; // Import HealthData type
 import BrandSurvey from '@/app/components/BrandSurvey';
 import { HiSparkles } from 'react-icons/hi';
 import { BiLoaderAlt } from 'react-icons/bi';
+
 // import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import GaugeChart from 'react-gauge-chart';
 
 function CustomTooltip({ children, content }: { children: React.ReactNode; content: string }) {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -137,7 +137,13 @@ export default function BrandHealth() {
       }
     } catch (err) {
       console.error('Error:', err);
-      setError(typeof err === 'string' ? err : err.message || 'An error occurred');
+      setError(
+        typeof err === 'string' 
+          ? err 
+          : err instanceof Error 
+            ? err.message 
+            : 'An error occurred'
+      );
     } finally {
       setLoading(false);
     }
