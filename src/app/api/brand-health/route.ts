@@ -15,11 +15,8 @@ async function getTrendsData(term: string): Promise<TrendsData | null> {
         keyword: term,
         startTime: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
         endTime: new Date(),
-        geo: 'US',
-        hl: 'en-US',
         timezone: -240, // EST timezone offset
-        category: 0, // All categories
-        granularTimeResolution: false
+        category: 0 // All categories
       });
       
       // Remove the ")]}'" prefix that Google often adds
@@ -58,8 +55,8 @@ async function getTrendsData(term: string): Promise<TrendsData | null> {
       });
     }
   }
-  
-  // Return weekly data points for the past year if all attempts fail
+
+  // Return default data if all attempts fail
   const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
   const timelineData = Array.from({ length: 52 }, (_, i) => {
     const date = new Date(oneYearAgo.getTime() + (i * 7 * 24 * 60 * 60 * 1000));

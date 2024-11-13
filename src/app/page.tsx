@@ -97,12 +97,12 @@ export default function BrandHealth() {
     }
   };
 
-  function isUrl(input) {
+  function isUrl(input: string): boolean {
     try {
       new URL(input); // If this succeeds, the input is a URL
       return true;
     } catch {
-      return false; // If parsing fails, it's not a URL
+      return false;
     }
   }
   

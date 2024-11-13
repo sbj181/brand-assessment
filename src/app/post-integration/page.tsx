@@ -5,29 +5,39 @@ import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import Header from '@/components/Header';
 import { useTheme } from 'next-themes';
+import { 
+  PostIntegrationResponses, 
+  PostIntegrationWeights,
+  PostIntegrationKey 
+} from '@/app/types/survey';
+
+interface SurveyQuestion {
+  name: PostIntegrationKey;
+  label: string;
+}
 
 const PostIntegrationSurvey = () => {
   const [score, setScore] = useState(0);
   const { theme } = useTheme();
   
-  const [responses, setResponses] = useState({
+  const [responses, setResponses] = useState<PostIntegrationResponses>({
     experience: 0,
     transition: 0,
     brandStrength: 0,
     additionalComments: '',
   });
 
-  const weights = {
+  const weights: PostIntegrationWeights = {
     experience: 0.4,
     transition: 0.3,
     brandStrength: 0.3,
   };
 
-  const calculateScore = (updatedResponses = responses) => {
+  const calculateScore = (updatedResponses: PostIntegrationResponses = responses) => {
     let totalScore = 0;
     let maxPossibleScore = 0;
 
-    Object.keys(weights).forEach((key) => {
+    (Object.keys(weights) as PostIntegrationKey[]).forEach((key) => {
       const responseValue = updatedResponses[key];
       const weight = weights[key];
       totalScore += responseValue * weight;
@@ -38,7 +48,7 @@ const PostIntegrationSurvey = () => {
     setScore(normalizedScore);
   };
 
-  const handleRatingSelect = (question: string, rating: number) => {
+  const handleRatingSelect = (question: PostIntegrationKey, rating: number) => {
     const updatedResponses = {
       ...responses,
       [question]: rating,
@@ -61,6 +71,21 @@ const PostIntegrationSurvey = () => {
       return theme === 'dark' ? 'rgb(239, 68, 68)' : 'rgb(255, 0, 0)'; // Red
     }
   };
+
+  const questions: SurveyQuestion[] = [
+    { 
+      name: 'experience', 
+      label: 'How was your experience migrating your brand to comply with the Aptar Group&apos;s brand standards?' 
+    },
+    { 
+      name: 'transition', 
+      label: 'How well was your brand&apos;s transition to the Aptar Group&apos;s brand standards handled by your colleagues within your organization?' 
+    },
+    { 
+      name: 'brandStrength', 
+      label: 'Do you feel the transition to the Aptar Group&apos;s family of brands has made your brand stronger?' 
+    },
+  ];
 
   return (
     <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
@@ -88,11 +113,7 @@ const PostIntegrationSurvey = () => {
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-          {[
-          { name: 'experience', label: 'How was your experience migrating your brand to comply with the Aptar Group’s brand standards?' },
-          { name: 'transition', label: 'How well was your brand’s transition to the Aptar Group’s brand standards handled by your colleagues within your organization?' },
-          { name: 'brandStrength', label: 'Do you feel the transition to the Aptar Group’s family of brands has made your brand stronger?' },
-        ].map((question, index) => (
+            {questions.map((question, index) => (
               <div key={index} className="space-y-3">
                 <label className="block text-md font-semibold text-gray-900 dark:text-white">
                   {question.label}
