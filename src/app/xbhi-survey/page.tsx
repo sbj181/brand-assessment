@@ -3,11 +3,14 @@
 import { useState } from 'react';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
+import Header from '@/components/Header';
+import { useTheme } from 'next-themes';
 
 const Survey = () => {
   const [brandName, setBrandName] = useState('');
   const [score, setScore] = useState(0);
-  const [darkMode, setDarkMode] = useState(false); // Assuming you can toggle dark mode
+  const { theme } = useTheme();
+  
 
   const [responses, setResponses] = useState({
     recognition: 0,
@@ -58,20 +61,26 @@ const Survey = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white shadow-md rounded-md">
+    <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <div className="max-w-6xl mx-auto">
+      <Header />
+
+    <div className="max-w-3xl mx-auto p-6 bg-white dark:bg-gray-800 shadow-md rounded-lg">
       <div className="w-48 h-auto mx-auto mb-4">
         <CircularProgressbar
           value={score}
           text={`${score}%`}
           styles={buildStyles({
-            pathColor: darkMode 
+            pathColor: theme === 'dark'
               ? `rgba(147, 197, 253, ${score / 100})`
               : `rgba(79, 70, 229, ${score / 100})`,
-            textColor: darkMode ? '#FFFFFF' : '#1F2937',
-            trailColor: darkMode ? '#374151' : '#E5E7EB',
+            textColor: theme === 'dark' ? '#FFFFFF' : '#1F2937',
+            trailColor: theme === 'dark' ? '#374151' : '#E5E7EB',
           })}
         />
-        <p className="text-center mt-2 dark:text-white font-semibold">Overall Score</p>
+        <p className="text-center mt-2 text-gray-900 dark:text-white font-semibold">
+          Overall Score
+        </p>
       </div>
 
       <h1 className="text-2xl font-bold mb-4">External Brand Health Indicator (XBHI) Survey</h1>
@@ -143,6 +152,8 @@ const Survey = () => {
           Submit Survey
         </button>
       </div>
+    </div>
+    </div>
     </div>
   );
 };

@@ -10,6 +10,7 @@ import { HealthData } from '@/app/types/api'; // Import HealthData type
 import BrandSurvey from '@/app/components/BrandSurvey';
 import { HiSparkles } from 'react-icons/hi';
 import { BiLoaderAlt } from 'react-icons/bi';
+import Header from '@/components/Header';
 
 // import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
@@ -96,39 +97,54 @@ export default function BrandHealth() {
     }
   };
 
+  function isUrl(input) {
+    try {
+      new URL(input); // If this succeeds, the input is a URL
+      return true;
+    } catch {
+      return false; // If parsing fails, it's not a URL
+    }
+  }
+  
   const handleSearch = async () => {
     setLoading(true);
     setError('');
     setScrapedData(null);
     setHealthData(null);
   
-    const formattedTerm = formatTermAsUrl(term);
-    const isUrl = formattedTerm.startsWith('http://') || formattedTerm.startsWith('https://');
-    
+    const isInputUrl = isUrl(term);
+  
+    // Set default value for `extractedBrandTerm` based on input term
+    let extractedBrandTerm = term;
+  
     try {
-      const scrapeResponse = await fetch('/api/scrape', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ url: formattedTerm }),
-      });
+      if (isInputUrl) {
+        // Only scrape if the input is a URL
+        const scrapeResponse = await fetch('/api/scrape', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({ url: term }), // Use the original term as a URL
+        });
   
-      let scrapedData = null;
-      let extractedBrandTerm = formattedTerm; // Default to the user-entered term
+        if (scrapeResponse.ok) {
+          const scrapeResult = await scrapeResponse.json();
+          const scrapedData = scrapeResult.data;
+          setScrapedData(scrapedData);
   
-      if (scrapeResponse.ok) {
-        const scrapeResult = await scrapeResponse.json();
-        scrapedData = scrapeResult.data;
-        setScrapedData(scrapedData);
-  
-        // Extract the brand name from the scraped data or domain if available
-        extractedBrandTerm = extractBrandTerm(formattedTerm, scrapedData);
+          // Extract the brand term from the scraped data
+          extractedBrandTerm = extractBrandTerm(term, scrapedData);
+        } else {
+          const text = await scrapeResponse.text();
+          throw new Error(`Scraping failed: ${text}`);
+        }
       }
   
-      setBrandTerm(extractedBrandTerm); // Update brandTerm in state
-      
+      setBrandTerm(extractedBrandTerm); // Update brand term
+  
+      // Proceed with other data fetching steps (e.g., trends, news)
       const healthResponse = await fetch('/api/brand-health', {
         method: 'POST',
         headers: {
@@ -162,6 +178,7 @@ export default function BrandHealth() {
   
   
   
+  
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,10 +199,7 @@ export default function BrandHealth() {
   return (
     <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Brand Health Assessment</h1>
-          <ThemeToggle />
-        </div>
+        <Header />
         
         <form onSubmit={handleSubmit} className="flex gap-4 mb-8">
           <input
