@@ -57,6 +57,14 @@ export default function BrandHealth() {
   const [surveyEnabled, setSurveyEnabled] = useState(false);
   const [surveyScore, setSurveyScore] = useState<number | null>(null);
 
+  const onScoreUpdate = (score: number) => {
+    setSurveyScore(score);
+  };
+
+  const [brandTerm, setBrandTerm] = useState<string>('');
+
+  
+
   const formatTermAsUrl = (input: string) => {
     const urlPattern = /^(http:\/\/|https:\/\/)/;
     const domainPattern = /^[\w.-]+\.[a-zA-Z]{2,}$/;
@@ -93,12 +101,11 @@ export default function BrandHealth() {
     setError('');
     setScrapedData(null);
     setHealthData(null);
-
+  
     const formattedTerm = formatTermAsUrl(term);
     const isUrl = formattedTerm.startsWith('http://') || formattedTerm.startsWith('https://');
     
     try {
-      // Always try to scrape first
       const scrapeResponse = await fetch('/api/scrape', {
         method: 'POST',
         headers: {
@@ -107,27 +114,30 @@ export default function BrandHealth() {
         },
         body: JSON.stringify({ url: formattedTerm }),
       });
-
+  
       let scrapedData = null;
+      let extractedBrandTerm = formattedTerm; // Default to the user-entered term
+  
       if (scrapeResponse.ok) {
         const scrapeResult = await scrapeResponse.json();
         scrapedData = scrapeResult.data;
         setScrapedData(scrapedData);
+  
+        // Extract the brand name from the scraped data or domain if available
+        extractedBrandTerm = extractBrandTerm(formattedTerm, scrapedData);
       }
-
-      // For brand health, use scraped title or domain name if it's a URL
-      const brandTerm = isUrl ? extractBrandTerm(formattedTerm, scrapedData) : formattedTerm;
-
-      // Always fetch brand health data
+  
+      setBrandTerm(extractedBrandTerm); // Update brandTerm in state
+      
       const healthResponse = await fetch('/api/brand-health', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({ term: brandTerm }),
+        body: JSON.stringify({ term: extractedBrandTerm }),
       });
-
+  
       if (healthResponse.ok) {
         const healthData = await healthResponse.json();
         setHealthData(healthData as HealthData);
@@ -148,6 +158,8 @@ export default function BrandHealth() {
       setLoading(false);
     }
   };
+  
+  
   
   
 
@@ -346,10 +358,12 @@ export default function BrandHealth() {
             )}
 
             {/* Survey Section */}
-            <BrandSurvey
-              isEnabled={surveyEnabled}
-              onScoreUpdate={(score) => setSurveyScore(score)}
+            <BrandSurvey 
+              onScoreUpdate={onScoreUpdate} 
+              isEnabled={surveyEnabled} 
+              brandName={brandTerm} 
             />
+
 
             {/* Google Trends Chart */}
             {healthData?.data?.trends?.default?.timelineData && 

@@ -13,63 +13,78 @@ export interface SurveyQuestion {
 }
 
 const SURVEY_QUESTIONS: SurveyQuestion[] = [
-  // Market Presence Category
+  // Brand Consistency Category
   {
     id: 1,
-    category: 'Market Presence',
-    question: "How familiar are potential customers with this brand?",
+    category: 'Brand Consistency',
+    question: "How consistent is {brand name}'s presentation across its internal and external communications? (Is the logo used consistently? Are there clear similarities between communications in both look and tone?)",
     type: 'scale',
     options: [
-      { text: "Not Familiar", weight: 1 },
-      { text: "Somewhat Familiar", weight: 2 },
-      { text: "Very Familiar", weight: 3 },
+      { text: "Not at all consistent", weight: 1 },
+      { text: "Somewhat consistent", weight: 2 },
+      { text: "Very consistent", weight: 3 },
     ],
     weight: 1.5
   },
   {
     id: 2,
-    category: 'Brand Reputation',
-    question: "How loyal is the customer base of this brand?",
+    category: 'Brand Value Proposition',
+    question: "Is the {brand name} value proposition clearly demonstrated through its owned media channels? (such as a website or social presence)",
     type: 'scale',
     options: [
-      { text: "Not Loyal", weight: 1 },
-      { text: "Somewhat Loyal", weight: 2 },
-      { text: "Very Loyal", weight: 3 },
+      { text: "Not clear at all", weight: 1 },
+      { text: "Somewhat clear", weight: 2 },
+      { text: "Very clear", weight: 3 },
     ],
-    weight: 1.2
+    weight: 1.4
   },
   {
     id: 3,
-    category: 'Brand Integration',
-    question: "How well does the brand's values and mission align with your company's?",
+    category: 'Competitive Comparison',
+    question: "Compared to its top competitors, what is your assessment of {brand name}'s overall presentation?",
     type: 'scale',
     options: [
-      { text: "Not Aligned", weight: 1 },
-      { text: "Somewhat Aligned", weight: 2 },
-      { text: "Very Well Aligned", weight: 3 },
+      { text: "Not as strong", weight: 1 },
+      { text: "Similar", weight: 2 },
+      { text: "Very strong and differentiated", weight: 3 },
     ],
-    weight: 1.3
+    weight: 1.6
   },
   {
     id: 4,
-    category: 'Brand Strength',
-    question: "How satisfied are customers with the products or services?",
+    category: 'Business Appeal',
+    question: "Does {brand name} feel like one you would like to do business with?",
     type: 'scale',
     options: [
-      { text: "Not Satisfied", weight: 1 },
-      { text: "Somewhat Satisfied", weight: 2 },
-      { text: "Very Satisfied", weight: 3 },
+      { text: "No", weight: 1 },
+      { text: "Maybe", weight: 2 },
+      { text: "Yes", weight: 3 },
     ],
-    weight: 1.4
+    weight: 1.5
+  },
+  {
+    id: 5,
+    category: 'Brand Similarity to Aptar',
+    question: "Does {brand name} have any similarities to the current Aptar Group family of brands?",
+    type: 'scale',
+    options: [
+      { text: "Not similar at all", weight: 1 },
+      { text: "Somewhat similar", weight: 2 },
+      { text: "Similar", weight: 3 },
+    ],
+    weight: 1.3
   }
 ];
+
 
 interface BrandSurveyProps {
   onScoreUpdate: (score: number) => void;
   isEnabled: boolean;
+  brandName: string; // prop for dynamic brand name
 }
 
-export default function BrandSurvey({ onScoreUpdate, isEnabled }: BrandSurveyProps) {
+
+export default function BrandSurvey({ onScoreUpdate, isEnabled, brandName }: BrandSurveyProps) {
   const [answers, setAnswers] = useState<Record<number, number>>({});
 
   const handleAnswer = (questionId: number, weight: number) => {
@@ -116,7 +131,9 @@ export default function BrandSurvey({ onScoreUpdate, isEnabled }: BrandSurveyPro
             </h4>
             {questions.map((q) => (
               <div key={q.id} className="space-y-3">
-                <p className="text-gray-700 dark:text-gray-300">{q.question}</p>
+                <p className="text-gray-700 dark:text-gray-300">
+                  {q.question.replace('{brand name}', brandName)}
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   {q.options?.map((option, index) => (
                     <button

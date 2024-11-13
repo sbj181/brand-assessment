@@ -4,18 +4,80 @@ import { TrendsData, WikiData, DuckDuckGoData, NewsData, WikidataResult, Scores 
 
 
 async function getTrendsData(term: string): Promise<TrendsData | null> {
+  const maxRetries = 5;
+  let delay = 1000;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-    const result = await interestOverTime({
-      keyword: term,
-      startTime: new Date(Date.now() - (365 * 24 * 60 * 60 * 1000)), // 1 year ago
-      endTime: new Date()
-    });
-    return JSON.parse(result);
-  } catch (error) {
-    console.error('Google Trends error:', error);
-    return null;
+      console.log(`Attempt ${attempt + 1}/${maxRetries} for term: ${term}`);
+      
+      const result = await interestOverTime({
+        keyword: term,
+        startTime: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
+        endTime: new Date(),
+        geo: 'US',
+        hl: 'en-US',
+        timezone: -240, // EST timezone offset
+        category: 0, // All categories
+        granularTimeResolution: false
+      });
+      
+      // Remove the ")]}'" prefix that Google often adds
+      const cleanResult = result.replace(/^\)\]\}'/, '');
+      
+      const parsedData = JSON.parse(cleanResult);
+      
+      if (!parsedData?.default?.timelineData) {
+        throw new Error("Invalid data structure");
+      }
+      
+      console.log('Successfully retrieved trends data:', {
+        dataPoints: parsedData.default.timelineData.length,
+        sampleValue: parsedData.default.timelineData[0]?.value
+      });
+      
+      return parsedData;
+      
+    } catch (error: any) {
+      const isRateLimitError = 
+        error.message.includes("429") || 
+        error.message.includes("<html") ||
+        error.message === "Invalid data structure";
+      
+      if (isRateLimitError && attempt < maxRetries - 1) {
+        console.warn(`Attempt ${attempt + 1} failed. Waiting ${delay / 1000} seconds...`);
+        await new Promise((res) => setTimeout(res, delay));
+        delay *= 2;
+        continue;
+      }
+      
+      console.error("Google Trends API error:", {
+        message: error.message,
+        attempt: attempt + 1,
+        isRateLimitError
+      });
+    }
   }
+  
+  // Return weekly data points for the past year if all attempts fail
+  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+  const timelineData = Array.from({ length: 52 }, (_, i) => {
+    const date = new Date(oneYearAgo.getTime() + (i * 7 * 24 * 60 * 60 * 1000));
+    return {
+      time: Math.floor(date.getTime() / 1000).toString(),
+      formattedTime: date.toISOString(),
+      value: [0]
+    };
+  });
+
+  return {
+    default: {
+      timelineData
+    }
+  } as TrendsData;
 }
+
+
 
 interface GoogleSearchScore {
   score: number;
@@ -34,28 +96,16 @@ const fetchGoogleResults = async (query: string): Promise<GoogleSearchScore> => 
     const apiKey = process.env.GOOGLE_API_KEY;
     const cx = process.env.GOOGLE_CSE_ID;
     
-    // Clean the query and add brand-specific terms
+    // Clean the query to remove any trailing commas
     const cleanQuery = query.trim().replace(/,+$/, '');
 
-    // Add exclusions based on the query
-    let exclusions = '';
-    if (cleanQuery.toLowerCase().includes('home')) {
-      exclusions = '-real -estate -apartment -house -residential -zillow -redfin -trulia';
-    } else if (cleanQuery.toLowerCase() === 'apple') {
-      exclusions = '-fruit -tree -recipe -food -orchard -pie -cider';
-    }
-    // Add more specific cases as needed
+    const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(cleanQuery)}&key=${apiKey}&cx=${cx}&num=10`;
 
-    // Enhanced query with more specific company identifiers
-    const enhancedQuery = `"${cleanQuery}" (company OR brand OR "Inc." OR "Corp." OR "LLC" OR "Ltd." OR "technology company" OR "official website" OR headquarters OR CEO) ${exclusions}`;
-    
-    const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(enhancedQuery)}&key=${apiKey}&cx=${cx}&num=10`;
-    
     console.log('Search URL:', url.replace(apiKey!, '[REDACTED]'));
-    
+
     const response = await fetch(url);
     console.log('Response status:', response.status);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Google API Error:', errorText);
@@ -68,7 +118,7 @@ const fetchGoogleResults = async (query: string): Promise<GoogleSearchScore> => 
       itemsCount: data.items?.length,
       firstResult: data.items?.[0]
     });
-    
+
     // Initialize scoring variables
     let exactMatches = 0;
     let authorityScore = 0;
@@ -80,27 +130,23 @@ const fetchGoogleResults = async (query: string): Promise<GoogleSearchScore> => 
 
     // Analyze each result
     data.items?.forEach((item: any) => {
-      // Check for exact matches in title or snippet
       const titleMatch = item.title.toLowerCase().includes(query.toLowerCase());
       const snippetMatch = item.snippet?.toLowerCase().includes(query.toLowerCase());
       if (titleMatch || snippetMatch) exactMatches++;
 
-      // Check for authority domains
       if (authorityDomains.some(domain => item.link.includes(domain))) {
         authorityScore += 10;
       }
 
-      // Additional points for official website
       if (item.link.includes(query.toLowerCase())) {
         authorityScore += 20;
       }
     });
 
-    // Calculate final score (0-100)
     const score = Math.min(100, Math.round(
-      (exactMatches * 10) +  // Up to 100 points for exact matches
-      (authorityScore) +     // Points for authority sites
-      (data.searchInformation?.totalResults > 1000 ? 20 : 0)  // Bonus for high total results
+      (exactMatches * 10) + 
+      (authorityScore) + 
+      (data.searchInformation?.totalResults > 1000 ? 20 : 0)
     ));
 
     return {
@@ -121,6 +167,7 @@ const fetchGoogleResults = async (query: string): Promise<GoogleSearchScore> => 
     };
   }
 };
+
 
 async function getNewsData(term: string): Promise<NewsData | null> {
     try {
