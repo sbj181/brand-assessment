@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TrendsData, WikiData, DuckDuckGoData, NewsData, WikidataResult, Scores } from '@/app/types/api';
 
+const fetchWithTimeout = async <T>(
+  promise: () => Promise<T>,
+  timeoutMs: number = 5000,
+  apiName: string
+): Promise<T | null> => {
+  try {
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`${apiName} timeout after ${timeoutMs}ms`)), timeoutMs);
+    });
+
+    return await Promise.race([
+      promise(),
+      timeoutPromise
+    ]) as T;
+  } catch (error) {
+    console.error(`${apiName} error:`, error);
+    return null;
+  }
+};
 
 async function getTrendsData(term: string): Promise<TrendsData | null> {
   try {
@@ -275,18 +294,40 @@ async function getWikidata(term: string): Promise<WikidataResult | null> {
     try {
       const { term } = await request.json();
       console.log('Searching for term:', term);
-      console.log('NEWS_API_KEY exists:', !!process.env.NEWS_API_KEY);
-  
-      // Fetch data from all sources concurrently
+
       const [trendsData, wikiData, ddgData, newsData, wikidataData, googleData] = await Promise.all([
-        getTrendsData(term),
-        getWikipediaData(term),
-        getDuckDuckGoData(term),
-        getNewsData(term),
-        getWikidata(term),
-        fetchGoogleResults(term)
+        fetchWithTimeout(
+          () => getTrendsData(term),
+          5000,
+          'Google Trends'
+        ),
+        fetchWithTimeout(
+          () => getWikipediaData(term),
+          5000,
+          'Wikipedia'
+        ),
+        fetchWithTimeout(
+          () => getDuckDuckGoData(term),
+          5000,
+          'DuckDuckGo'
+        ),
+        fetchWithTimeout(
+          () => getNewsData(term),
+          5000,
+          'News API'
+        ),
+        fetchWithTimeout(
+          () => getWikidata(term),
+          5000,
+          'Wikidata'
+        ),
+        fetchWithTimeout(
+          () => fetchGoogleResults(term),
+          5000,
+          'Google Search'
+        )
       ]);
-  
+
       console.log('News Data received:', newsData); // Debug log
   
       const scores = calculateScores(trendsData, wikiData, ddgData, newsData, wikidataData, googleData);

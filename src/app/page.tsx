@@ -12,6 +12,7 @@ import { HiSparkles } from 'react-icons/hi';
 import { BiLoaderAlt } from 'react-icons/bi';
 import Header from '@/components/Header';
 import { useTheme } from 'next-themes';
+import LoadingBar from '@/components/LoadingBar';
 
 // import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
@@ -76,18 +77,15 @@ export default function BrandHealth() {
     return null;
   }
 
-  const formatTermAsUrl = (input: string) => {
+  const formatTermAsUrl = (input: string): string => {
     const urlPattern = /^(http:\/\/|https:\/\/)/;
-    const domainPattern = /^[\w.-]+\.[a-zA-Z]{2,}$/;
-    
-    // If it looks like a domain but has no scheme, add https://
-    if (!urlPattern.test(input) && domainPattern.test(input)) {
+    if (!urlPattern.test(input)) {
       return `https://${input}`;
     }
     return input;
   };
 
-  const extractBrandTerm = (url: string, scrapedData: any) => {
+  const extractBrandFromUrl = (url: string, scrapedData: any): string => {
     // First try to get a clean brand name from scraped data
     if (scrapedData?.title) {
       // Get the first few words of the title before common separators
@@ -103,18 +101,19 @@ export default function BrandHealth() {
                        .split('.')[0]; // Get first part of domain
       return domain;
     } catch (error) {
+      console.error('URL parsing error:', error);
       return url;
     }
   };
 
-  function isUrl(input: string): boolean {
+  const isUrl = (input: string): boolean => {
     try {
-      new URL(input); // If this succeeds, the input is a URL
-      return true;
+      const urlPattern = /^(http:\/\/|https:\/\/)?[\w.-]+\.[a-zA-Z]{2,}(\/\S*)?$/;
+      return urlPattern.test(input);
     } catch {
       return false;
     }
-  }
+  };
   
   const handleSearch = async () => {
     setLoading(true);
@@ -123,12 +122,14 @@ export default function BrandHealth() {
     setHealthData(null);
   
     const isInputUrl = isUrl(term);
+    console.log('Is URL?', isInputUrl, term);
   
     // Set default value for `extractedBrandTerm` based on input term
     let extractedBrandTerm = term;
   
     try {
       if (isInputUrl) {
+        console.log('Attempting to scrape URL:', term);
         // Only scrape if the input is a URL
         const scrapeResponse = await fetch('/api/scrape', {
           method: 'POST',
@@ -136,18 +137,22 @@ export default function BrandHealth() {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
-          body: JSON.stringify({ url: term }), // Use the original term as a URL
+          body: JSON.stringify({ url: formatTermAsUrl(term) }), // Ensure URL is properly formatted
         });
+  
+        console.log('Scrape response status:', scrapeResponse.status);
   
         if (scrapeResponse.ok) {
           const scrapeResult = await scrapeResponse.json();
-          const scrapedData = scrapeResult.data;
-          setScrapedData(scrapedData);
-  
-          // Extract the brand term from the scraped data
-          extractedBrandTerm = extractBrandTerm(term, scrapedData);
+          console.log('Scrape result:', scrapeResult);
+          
+          setScrapedData(scrapeResult.data);
+          // Extract the brand term using renamed function
+          extractedBrandTerm = extractBrandFromUrl(term, scrapeResult.data);
+          console.log('Extracted brand term:', extractedBrandTerm);
         } else {
           const text = await scrapeResponse.text();
+          console.error('Scrape error:', text);
           throw new Error(`Scraping failed: ${text}`);
         }
       }
@@ -210,7 +215,7 @@ export default function BrandHealth() {
     <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <div className="max-w-6xl mx-auto">
         <Header />
-        
+
         <form onSubmit={handleSubmit} className="flex gap-4 mb-8">
           <input
             type="text"
@@ -240,7 +245,9 @@ export default function BrandHealth() {
 
         {error && <div className="text-red-500 mb-4">{error}</div>}
 
-        
+        <div>
+          <LoadingBar isLoading={loading} />
+        </div>
 
         {healthData && (
           <div className="space-y-8 mt-8">
