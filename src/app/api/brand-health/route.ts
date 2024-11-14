@@ -1,77 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { interestOverTime } from 'google-trends-api';
 import { TrendsData, WikiData, DuckDuckGoData, NewsData, WikidataResult, Scores } from '@/app/types/api';
 
 
 async function getTrendsData(term: string): Promise<TrendsData | null> {
-  const maxRetries = 5;
-  let delay = 1000;
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      console.log(`Attempt ${attempt + 1}/${maxRetries} for term: ${term}`);
-      
-      const result = await interestOverTime({
-        keyword: term,
-        startTime: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
-        endTime: new Date(),
-        timezone: -240, // EST timezone offset
-        category: 0 // All categories
-      });
-      
-      // Remove the ")]}'" prefix that Google often adds
-      const cleanResult = result.replace(/^\)\]\}'/, '');
-      
-      const parsedData = JSON.parse(cleanResult);
-      
-      if (!parsedData?.default?.timelineData) {
-        throw new Error("Invalid data structure");
-      }
-      
-      console.log('Successfully retrieved trends data:', {
-        dataPoints: parsedData.default.timelineData.length,
-        sampleValue: parsedData.default.timelineData[0]?.value
-      });
-      
-      return parsedData;
-      
-    } catch (error: any) {
-      const isRateLimitError = 
-        error.message.includes("429") || 
-        error.message.includes("<html") ||
-        error.message === "Invalid data structure";
-      
-      if (isRateLimitError && attempt < maxRetries - 1) {
-        console.warn(`Attempt ${attempt + 1} failed. Waiting ${delay / 1000} seconds...`);
-        await new Promise((res) => setTimeout(res, delay));
-        delay *= 2;
-        continue;
-      }
-      
-      console.error("Google Trends API error:", {
-        message: error.message,
-        attempt: attempt + 1,
-        isRateLimitError
-      });
+  try {
+    console.log(`Fetching trends data for term: ${term}`);
+    
+    const url = `https://serpapi.com/search.json?engine=google_trends&data_type=TIMESERIES&q=${encodeURIComponent(term)}&api_key=${process.env.SERP_API_KEY}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`SerpAPI returned ${response.status}`);
     }
-  }
+    
+    const data = await response.json();
+    
+    if (!data.interest_over_time?.timeline_data) {
+      throw new Error("No trends data available");
+    }
 
-  // Return default data if all attempts fail
-  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-  const timelineData = Array.from({ length: 52 }, (_, i) => {
-    const date = new Date(oneYearAgo.getTime() + (i * 7 * 24 * 60 * 60 * 1000));
+    // Convert SerpAPI format to match our TrendsData type
+    const timelineData = data.interest_over_time.timeline_data.map((point: any) => ({
+      time: point.timestamp,
+      formattedTime: point.date,
+      value: [point.values[0].extracted_value]
+    }));
+
+    console.log('Successfully retrieved trends data:', {
+      dataPoints: timelineData.length,
+      sampleValue: timelineData[0]?.value
+    });
+
     return {
-      time: Math.floor(date.getTime() / 1000).toString(),
-      formattedTime: date.toISOString(),
-      value: [0]
-    };
-  });
+      default: {
+        timelineData
+      }
+    } as TrendsData;
 
-  return {
-    default: {
-      timelineData
-    }
-  } as TrendsData;
+  } catch (error: any) {
+    console.error("SerpAPI Trends error:", error);
+    return {
+      default: {
+        timelineData: [],
+        error: `Failed to fetch trends data: ${error.message}`
+      }
+    } as TrendsData;
+  }
 }
 
 

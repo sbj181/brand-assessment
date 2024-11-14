@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import Header from '@/components/Header';
@@ -17,6 +17,7 @@ interface SurveyQuestion {
 }
 
 const PostIntegrationSurvey = () => {
+  const [mounted, setMounted] = useState(false);
   const [score, setScore] = useState(0);
   const { theme } = useTheme();
   
@@ -86,6 +87,14 @@ const PostIntegrationSurvey = () => {
       label: 'Do you feel the transition to the Aptar Group&apos;s family of brands has made your brand stronger?' 
     },
   ];
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">

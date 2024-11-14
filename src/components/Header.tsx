@@ -1,14 +1,30 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
+import { RiMentalHealthLine, RiSurveyLine, RiBodyScanFill } from 'react-icons/ri';
 
 export default function Header() {
   const pathname = usePathname();
 
   const navLinks = [
-    { name: 'Preliminary Brand Health', path: '/' },
-    { name: 'XBHI Survey', path: '/xbhi-survey' },
-    { name: 'Post Integration', path: '/post-integration' },
+    { 
+      name: 'Brand Health', 
+      path: '/', 
+      icon: <RiMentalHealthLine className="w-5 h-5" />,
+      ariaLabel: 'Brand Health Assessment'
+    },
+    { 
+      name: 'XBHI Survey', 
+      path: '/xbhi-survey', 
+      icon: <RiSurveyLine className="w-5 h-5" />,
+      ariaLabel: 'External Brand Health Survey'
+    },
+    { 
+      name: 'Post Integration', 
+      path: '/post-integration', 
+      icon: <RiBodyScanFill className="w-5 h-5" />,
+      ariaLabel: 'Post Integration Survey'
+    },
   ];
 
   return (
@@ -23,13 +39,15 @@ export default function Header() {
           <Link
             key={link.path}
             href={link.path}
-            className={`px-4 py-2 rounded-full transition-colors duration-200 ${
+            aria-label={link.ariaLabel}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-colors duration-200 ${
               pathname === link.path
                 ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
                 : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-700/50'
             }`}
           >
-            {link.name}
+            {link.icon}
+            <span className="hidden sm:inline">{link.name}</span>
           </Link>
         ))}
       </nav>

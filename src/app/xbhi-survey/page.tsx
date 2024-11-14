@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import Header from '@/components/Header';
@@ -18,6 +18,7 @@ const XBHISurvey = () => {
   const [brandName, setBrandName] = useState('');
   const [score, setScore] = useState(0);
   const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   const [responses, setResponses] = useState<XBHIResponses>({
     recognition: 0,
@@ -106,6 +107,14 @@ const XBHISurvey = () => {
       label: `How well does ${brandName} deliver on its promises?` 
     },
   ];
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">

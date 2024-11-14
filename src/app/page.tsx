@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -11,6 +11,7 @@ import BrandSurvey from '@/app/components/BrandSurvey';
 import { HiSparkles } from 'react-icons/hi';
 import { BiLoaderAlt } from 'react-icons/bi';
 import Header from '@/components/Header';
+import { useTheme } from 'next-themes';
 
 // import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
@@ -64,7 +65,16 @@ export default function BrandHealth() {
 
   const [brandTerm, setBrandTerm] = useState<string>('');
 
+  const [mounted, setMounted] = useState(false);
+  const { theme } = useTheme();
   
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   const formatTermAsUrl = (input: string) => {
     const urlPattern = /^(http:\/\/|https:\/\/)/;
