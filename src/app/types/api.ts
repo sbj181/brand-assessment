@@ -43,30 +43,82 @@ export interface Scores {
   googlePresence: number;
 }
 
+export interface SentimentAnalysis {
+  overallSentiment: number;
+  brandPerception: string;
+  marketPosition: string;
+  publicSentiment: string;
+  keyStrengths: string[];
+  potentialConcerns: string[];
+}
+
 export interface HealthData {
-    scores: Scores;
-    data: {
-      trends?: {
-        default?: {
-          timelineData: Array<{ formattedAxisTime: string; value: number[] }>;
+  scores: {
+    overall: number;
+    sentimentScore?: number;
+  };
+  data: {
+    trends: any;
+    wiki: any;
+    ddg: any;
+    news: any;
+    wikidata: any;
+    google: any;
+    sentiment: {
+      overallSentiment: number;
+      brandPerception: string;
+      analysisBreakdown: {
+        socialMedia: {
+          mentionsCount: number;
+          platformBreakdown: {
+            [key: string]: {
+              sentiment: number;
+              volume: string;
+            };
+          };
+          topHashtags: string[];
+          engagementMetrics: {
+            positive: number;
+            neutral: number;
+            negative: number;
+          };
+        };
+        newsMedia: {
+          coverage: string;
+          sentimentBreakdown: {
+            positive: number;
+            neutral: number;
+            negative: number;
+          };
+          recentTrends: string[];
+        };
+        industryContext: {
+          marketPosition: string;
+          competitorComparison: string;
+          industryTrends: string[];
         };
       };
-      wiki?: {
-        extract: string;
+      keyStrengths: string[];
+      potentialConcerns: string[];
+      detailedMetrics: {
+        brandTrust: number;
+        customerLoyalty: number;
+        marketPresence: number;
+        innovationPerception: number;
+        valueProposition: number;
       };
-      ddg?: {
-        abstract: string;
-        AbstractURL?: string;
-        RelatedTopics?: Array<{ Icon?: { URL: string }; Text: string; FirstURL?: string }>;
+      recommendedActions: {
+        immediate: string[];
+        shortTerm: string[];
+        longTerm: string[];
       };
-      news?: NewsData;
-      wikidata?: {
-        description?: string;
-        aliases?: string[];
-      };
-      google?: {
-        items: Array<{ title: string; snippet: string; link: string }>; // Add google results structure
+      analysisMethodology: {
+        dataPoints: string[];
+        timeframe: string;
+        confidenceScore: number;
+        limitations: string[];
       };
     };
-  }
+  };
+}
   

@@ -290,86 +290,137 @@ async function getWikidata(term: string): Promise<WikidataResult | null> {
   
   
 
+  async function getSentimentAnalysis(term: string, context: any) {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+      if (!baseUrl) {
+        throw new Error('NEXT_PUBLIC_APP_URL is not defined');
+      }
+
+      console.log('Making sentiment request to:', `${baseUrl}/api/sentiment`);
+
+      const response = await fetch(`${baseUrl}/api/sentiment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          term,
+          context: {
+            news: context.news,
+            wiki: context.wiki,
+            trends: context.trends
+          }
+        }),
+        // Add these options for server-side fetch
+        cache: 'no-store',
+        next: { revalidate: 0 }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch sentiment data: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('Sentiment Analysis Response:', data);
+      return data.sentiment;
+    } catch (error) {
+      console.error('Error fetching sentiment:', error);
+      return null;
+    }
+  }
+
+  console.log("Incoming request for health data");
+
+  export async function GET(request: Request) {
+    try {
+      const { searchParams } = new URL(request.url);
+      const term = searchParams.get('term');
+      
+      if (!term) {
+        return new Response('Missing term parameter', { status: 400 });
+      }
+
+      console.log(`Processing health check for term: ${term}`);
+
+      // Fetch all your data...
+      
+      // Before generating sentiment
+      console.log("Raw data collected, generating sentiment...");
+
+      // Generate sentiment analysis
+      const sentiment = await generateSentimentAnalysis(newsArticles, wikiData, trends);
+      
+      console.log("Sentiment generated:", sentiment);
+
+      // Return response
+      return new Response(JSON.stringify({
+        trends,
+        wiki: wikiData,
+        ddg: ddgData,
+        news: newsData,
+        wikidata: wikidataData,
+        google: googleData,
+        sentiment, // Make sure this is included
+        term
+      }));
+
+    } catch (error) {
+      console.error("Error in health check:", error);
+      return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    }
+  }
+  
   export async function POST(request: NextRequest) {
     try {
       const { term } = await request.json();
-      console.log('Searching for term:', term);
+      console.log('Processing brand health for term:', term);
 
+      // Collect all your data
       const [trendsData, wikiData, ddgData, newsData, wikidataData, googleData] = await Promise.all([
-        fetchWithTimeout(
-          () => getTrendsData(term),
-          5000,
-          'Google Trends'
-        ),
-        fetchWithTimeout(
-          () => getWikipediaData(term),
-          5000,
-          'Wikipedia'
-        ),
-        fetchWithTimeout(
-          () => getDuckDuckGoData(term),
-          5000,
-          'DuckDuckGo'
-        ),
-        fetchWithTimeout(
-          () => getNewsData(term),
-          5000,
-          'News API'
-        ),
-        fetchWithTimeout(
-          () => getWikidata(term),
-          5000,
-          'Wikidata'
-        ),
-        fetchWithTimeout(
-          () => fetchGoogleResults(term),
-          5000,
-          'Google Search'
-        )
+        fetchWithTimeout(() => getTrendsData(term), 5000, 'Google Trends'),
+        fetchWithTimeout(() => getWikipediaData(term), 5000, 'Wikipedia'),
+        fetchWithTimeout(() => getDuckDuckGoData(term), 5000, 'DuckDuckGo'),
+        fetchWithTimeout(() => getNewsData(term), 5000, 'News API'),
+        fetchWithTimeout(() => getWikidata(term), 5000, 'Wikidata'),
+        fetchWithTimeout(() => fetchGoogleResults(term), 5000, 'Google Search')
       ]);
 
-      console.log('News Data received:', newsData); // Debug log
-  
-      const scores = calculateScores(trendsData, wikiData, ddgData, newsData, wikidataData, googleData);
-      console.log('Calculated scores:', scores); // Debug log
-  
-      return new NextResponse(
-        JSON.stringify({
-          success: true,
-          scores,
-          data: {
-            trends: trendsData,
-            wiki: wikiData,
-            ddg: ddgData,
-            news: newsData,
-            wikidata: wikidataData,
-            google: googleData,
-            term
-          }
-        }),
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-          },
+      // Create context for sentiment analysis
+      const context = {
+        news: newsData,
+        wiki: wikiData,
+        trends: trendsData
+      };
+
+      // Get sentiment analysis with context
+      const sentimentData = await getSentimentAnalysis(term, context);
+      console.log('Sentiment Data:', sentimentData);
+
+      const scores = calculateScores(trendsData, wikiData, ddgData, newsData, wikidataData, googleData, sentimentData);
+      
+      return NextResponse.json({
+        success: true,
+        scores,
+        data: {
+          trends: trendsData,
+          wiki: wikiData,
+          ddg: ddgData,
+          news: newsData,
+          wikidata: wikidataData,
+          google: googleData,
+          sentiment: sentimentData?.sentiment || null,
+          term
         }
-      );
-  
+      });
+
     } catch (error) {
-      console.error('API route error:', error);
-  
-      return new NextResponse(
-        JSON.stringify({
-          error: error instanceof Error ? error.message : 'Internal server error',
-          details: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined
-        }),
-        {
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      console.error('Error in brand health API:', error);
+      return NextResponse.json({ 
+        success: false, 
+        error: error.message 
+      }, { status: 500 });
     }
   }
   

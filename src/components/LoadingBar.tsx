@@ -7,11 +7,13 @@ interface LoadingBarProps {
 }
 
 const loadingSteps = [
-  { progress: 20, message: "Checking Google Trends..." },
-  { progress: 40, message: "Analyzing news coverage..." },
-  { progress: 60, message: "Searching Wikipedia..." },
-  { progress: 80, message: "Calculating brand presence..." },
-  { progress: 95, message: "Finalizing analysis..." },
+  { progress: 15, message: "Checking Google Trends..." },
+  { progress: 30, message: "Analyzing news coverage..." },
+  { progress: 45, message: "Searching Wikipedia..." },
+  { progress: 60, message: "Calculating brand presence..." },
+  { progress: 75, message: "Analyzing market sentiment..." },
+  { progress: 85, message: "Processing AI insights..." },
+  { progress: 95, message: "Finalizing analysis..." }
 ];
 
 export default function LoadingBar({ isLoading }: LoadingBarProps) {

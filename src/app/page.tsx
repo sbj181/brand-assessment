@@ -13,6 +13,7 @@ import { BiLoaderAlt } from 'react-icons/bi';
 import Header from '@/components/Header';
 import { useTheme } from 'next-themes';
 import LoadingBar from '@/components/LoadingBar';
+import SentimentVisuals from '@/components/SentimentVisuals';
 
 // import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
@@ -118,73 +119,60 @@ export default function BrandHealth() {
   const handleSearch = async () => {
     setLoading(true);
     setError('');
-    setScrapedData(null);
-    setHealthData(null);
-  
-    const isInputUrl = isUrl(term);
-    console.log('Is URL?', isInputUrl, term);
-  
-    // Set default value for `extractedBrandTerm` based on input term
-    let extractedBrandTerm = term;
   
     try {
-      if (isInputUrl) {
-        console.log('Attempting to scrape URL:', term);
-        // Only scrape if the input is a URL
-        const scrapeResponse = await fetch('/api/scrape', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify({ url: formatTermAsUrl(term) }), // Ensure URL is properly formatted
-        });
-  
-        console.log('Scrape response status:', scrapeResponse.status);
-  
-        if (scrapeResponse.ok) {
-          const scrapeResult = await scrapeResponse.json();
-          console.log('Scrape result:', scrapeResult);
-          
-          setScrapedData(scrapeResult.data);
-          // Extract the brand term using renamed function
-          extractedBrandTerm = extractBrandFromUrl(term, scrapeResult.data);
-          console.log('Extracted brand term:', extractedBrandTerm);
-        } else {
-          const text = await scrapeResponse.text();
-          console.error('Scrape error:', text);
-          throw new Error(`Scraping failed: ${text}`);
-        }
-      }
-  
-      setBrandTerm(extractedBrandTerm); // Update brand term
-  
-      // Proceed with other data fetching steps (e.g., trends, news)
+      // First get the brand health data
       const healthResponse = await fetch('/api/brand-health', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
         },
-        body: JSON.stringify({ term: extractedBrandTerm }),
+        body: JSON.stringify({ term: term }),
       });
-  
-      if (healthResponse.ok) {
-        const healthData = await healthResponse.json();
-        setHealthData(healthData as HealthData);
-      } else {
-        const text = await healthResponse.text();
-        throw new Error(`Unexpected response from server: ${text}`);
+
+      if (!healthResponse.ok) {
+        throw new Error('Failed to fetch health data');
       }
-    } catch (err) {
-      console.error('Error:', err);
-      setError(
-        typeof err === 'string' 
-          ? err 
-          : err instanceof Error 
-            ? err.message 
-            : 'An error occurred'
-      );
+
+      const healthData = await healthResponse.json();
+
+      // Then get sentiment data with context from health data
+      const sentimentResponse = await fetch('/api/sentiment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          term: term,
+          context: {
+            wiki: healthData?.data?.wiki?.extract,
+            news: healthData?.data?.news?.articles?.map(a => a.title).join('. '),
+            description: healthData?.data?.ddg?.AbstractText
+          }
+        }),
+      });
+
+      if (!sentimentResponse.ok) {
+        throw new Error('Failed to fetch sentiment data');
+      }
+
+      const sentimentData = await sentimentResponse.json();
+
+      // Combine the data
+      const combinedData = {
+        ...healthData,
+        data: {
+          ...healthData.data,
+          sentiment: sentimentData.sentiment
+        }
+      };
+
+      console.log('Combined Data:', combinedData);
+      setHealthData(combinedData);
+
+    } catch (error) {
+      console.error('Search error:', error);
+      setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -202,14 +190,16 @@ export default function BrandHealth() {
 
   const calculateOverallScore = (data: HealthData) => {
     const baseScore = data.scores.overall;
+    const sentimentScore = data.scores.sentimentScore || 50; // Assume neutral if missing
     if (!surveyEnabled || surveyScore === null) return baseScore;
-    
-    // Adjust these weights based on how much you want the survey to impact the score
-    const SURVEY_WEIGHT = 0.2; // 20% weight to survey
-    const API_WEIGHT = 0.8;    // 80% weight to API data
-    
-    return (baseScore * API_WEIGHT) + (surveyScore * SURVEY_WEIGHT);
-  };
+
+    // Adjust these weights
+    const SURVEY_WEIGHT = 0.15; // 15% weight to manual survey
+    const SENTIMENT_WEIGHT = 0.10; // 10% weight to sentiment analysis
+    const API_WEIGHT = 0.75; // 75% weight to API data
+
+    return baseScore * API_WEIGHT + surveyScore * SURVEY_WEIGHT + sentimentScore * SENTIMENT_WEIGHT;
+  };  
 
   return (
     <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
@@ -359,29 +349,59 @@ export default function BrandHealth() {
               </div>
             </div>
 
-            
+            {/* Sentiment Analysis Section */}
+            {healthData?.data?.sentiment ? (
+  <div>
+    <h3>Sentiment Analysis</h3>
+    <p>Overall Sentiment: {healthData.data.sentiment.overallSentiment}%</p>
+    <p>Brand Perception: {healthData.data.sentiment.brandPerception}</p>
+    <p>Market Position: {healthData.data.sentiment.marketPosition}</p>
+    <h4>Key Strengths</h4>
+    <ul>
+      {healthData.data.sentiment.keyStrengths.length > 0 ? (
+        healthData.data.sentiment.keyStrengths.map((strength, index) => (
+          <li key={index}>{strength}</li>
+        ))
+      ) : (
+        <li>No strengths available</li>
+      )}
+    </ul>
+    <h4>Potential Concerns</h4>
+    <ul>
+      {healthData.data.sentiment.potentialConcerns.length > 0 ? (
+        healthData.data.sentiment.potentialConcerns.map((concern, index) => (
+          <li key={index}>{concern}</li>
+        ))
+      ) : (
+        <li>No concerns available</li>
+      )}
+    </ul>
+  </div>
+) : (
+  <p>No sentiment data available.</p>
+)}
+
+
 
             {/* Website Data Section */}
             {scrapedData && (
               <div className="mt-8 bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow">
                 <div className="text-black dark:text-white space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {scrapedData.metaImage && (
-                      <div className="mb-4 md:mb-0">
-                        <img 
-                          src={scrapedData.metaImage} 
-                          alt="Site Preview"
-                          className="max-w-full h-auto rounded-lg shadow"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
+                  {scrapedData?.metaImage ? (
+    <img 
+      src={scrapedData.metaImage} 
+      alt="Site Preview"
+      className="max-w-full h-auto rounded-lg shadow"
+      onError={(e) => e.currentTarget.style.display = 'none'} 
+    />
+  ) : (
+    <p>No image available.</p>
+  )}
                     <div className="md:col-span-3">
-                      <h2 className="text-lg font-bold mb-2 text-gray-900 dark:text-white">Website Data</h2>
-                      <p><strong>Title:</strong> {scrapedData.ogTitle || 'N/A'}</p>
-                      <p><strong>Description:</strong> {scrapedData.ogDescription || 'N/A'}</p>
+                    <h2>Website Data</h2>
+  <p><strong>Title:</strong> {scrapedData?.ogTitle || 'N/A'}</p>
+  <p><strong>Description:</strong> {scrapedData?.ogDescription || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
