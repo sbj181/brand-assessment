@@ -5,7 +5,6 @@ import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useHover, useFloating, offset, shift, useInteractions, FloatingPortal } from '@floating-ui/react';
-import ThemeToggle from '@/components/ThemeToggle';
 import { HealthData } from '@/app/types/api'; // Import HealthData type
 import BrandSurvey from '@/app/components/BrandSurvey';
 import { HiSparkles } from 'react-icons/hi';
@@ -349,148 +348,119 @@ export default function BrandHealth() {
               </div>
             </div>
 
-            {/* Sentiment Analysis Section */}
-            {healthData?.data?.sentiment ? (
-  <div>
-    <h3>Sentiment Analysis</h3>
-    <p>Overall Sentiment: {healthData.data.sentiment.overallSentiment}%</p>
-    <p>Brand Perception: {healthData.data.sentiment.brandPerception}</p>
-    <p>Market Position: {healthData.data.sentiment.marketPosition}</p>
-    <h4>Key Strengths</h4>
-    <ul>
-      {healthData.data.sentiment.keyStrengths.length > 0 ? (
-        healthData.data.sentiment.keyStrengths.map((strength, index) => (
-          <li key={index}>{strength}</li>
-        ))
-      ) : (
-        <li>No strengths available</li>
-      )}
-    </ul>
-    <h4>Potential Concerns</h4>
-    <ul>
-      {healthData.data.sentiment.potentialConcerns.length > 0 ? (
-        healthData.data.sentiment.potentialConcerns.map((concern, index) => (
-          <li key={index}>{concern}</li>
-        ))
-      ) : (
-        <li>No concerns available</li>
-      )}
-    </ul>
-  </div>
-) : (
-  <p>No sentiment data available.</p>
-)}
-
-
-
-            {/* Website Data Section */}
-            {scrapedData && (
-              <div className="mt-8 bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow">
-                <div className="text-black dark:text-white space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {scrapedData?.metaImage ? (
-    <img 
-      src={scrapedData.metaImage} 
-      alt="Site Preview"
-      className="max-w-full h-auto rounded-lg shadow"
-      onError={(e) => e.currentTarget.style.display = 'none'} 
-    />
-  ) : (
-    <p>No image available.</p>
-  )}
-                    <div className="md:col-span-3">
-                    <h2>Website Data</h2>
-  <p><strong>Title:</strong> {scrapedData?.ogTitle || 'N/A'}</p>
-  <p><strong>Description:</strong> {scrapedData?.ogDescription || 'N/A'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Survey Section */}
-            <BrandSurvey 
-              onScoreUpdate={onScoreUpdate} 
-              isEnabled={surveyEnabled} 
-              brandName={brandTerm} 
-            />
-
-
-            {/* Google Trends Chart */}
-            {healthData?.data?.trends?.default?.timelineData && 
-             healthData.data.trends.default.timelineData.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-                <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
-                  🔍 Google Trends - Search Interest Over Time
-                </h3>
-                <div className="h-[400px]">
-                  <ResponsiveContainer>
-                    <LineChart data={healthData.data.trends.default.timelineData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
-                      <XAxis
-                        dataKey="formattedAxisTime"
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                        tick={{ fill: darkMode ? '#9CA3AF' : '#374151' }}
-                      />
-                      <YAxis tick={{ fill: darkMode ? '#9CA3AF' : '#374151' }} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: darkMode ? '#1F2937' : '#FFFFFF',
-                          border: 'none',
-                          borderRadius: '0.375rem',
-                          color: darkMode ? '#FFFFFF' : '#000000',
-                        }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="value[0]"
-                        stroke="#4F46E5"
-                        strokeWidth={2}
-                        dot={{ fill: '#4F46E5' }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-
             {/* Brand Health Metrics */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
               <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
                 📊 Brand Health Metrics
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {[
-                  { subject: 'Overall Health', score: healthData.scores.overall, color: '#4F46E5' },
-                  { subject: 'Search Trends', score: healthData.scores.searchTrend, color: '#10B981' },
-                  { subject: 'Wikipedia', score: healthData.scores.wikipedia, color: '#F59E0B' },
-                  { subject: 'Search Results', score: healthData.scores.searchResults, color: '#EC4899' },
-                  { subject: 'News Coverage', score: healthData.scores.newsCoverage, color: '#6366F1' },
-                  { subject: 'Wikidata', score: healthData.scores.wikidata, color: '#8B5CF6' },
-                  { subject: 'Google Presence', score: healthData.scores.googlePresence, color: '#2563EB' },
-                  ...(surveyEnabled && surveyScore !== null ? [
-                    { subject: 'Survey Score', score: Math.round(surveyScore), color: '#DC2626' }
-                  ] : [])
-                ].map((metric) => (
-                  <div key={metric.subject} className="text-center">
-                    <div className="w-32 h-32 mx-auto">
+              {[
+  { subject: 'Overall Health', score: healthData.scores.overall, color: '#4F46E5' },
+  { subject: 'Sentiment', score: healthData.data.sentiment.overallSentiment, color: '#10B981' }, // Use the sentiment data directly
+  { subject: 'Search Trends', score: healthData.scores.searchTrend, color: '#10B981' },
+  { subject: 'Wikipedia', score: healthData.scores.wikipedia, color: '#F59E0B' },
+  { subject: 'Search Results', score: healthData.scores.searchResults, color: '#EC4899' },
+  { subject: 'News Coverage', score: healthData.scores.newsCoverage, color: '#6366F1' },
+  { subject: 'Wikidata', score: healthData.scores.wikidata, color: '#8B5CF6' },
+  { subject: 'Google Presence', score: healthData.scores.googlePresence, color: '#2563EB' },
+  ...(surveyEnabled && surveyScore !== null ? [
+    { subject: 'Survey Score', score: Math.round(surveyScore), color: '#DC2626' }
+  ] : [])
+].map((metric) => (
+  <div key={metric.subject} className="text-center">
+    <div className="w-32 h-32 mx-auto">
+      <CircularProgressbar
+        value={metric.score}
+        text={`${metric.score}%`}
+        styles={buildStyles({
+          pathColor: metric.color,
+          textColor: darkMode ? '#FFFFFF' : '#1F2937',
+          trailColor: darkMode ? '#374151' : '#E5E7EB'
+        })}
+      />
+    </div>
+    <p className="mt-2 font-medium text-gray-900 dark:text-white">{metric.subject}</p>
+  </div>
+))}
+              </div>
+            </div>
+
+            {/* Sentiment Analysis Section */}
+            {healthData?.data?.sentiment && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow mt-6">
+                <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                  <HiSparkles className="text-blue-500 mr-2" />
+                  AI Brand Sentiment Analysis
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {/* Overall Score - 1/3 column */}
+                  <div>
+                    <div className="w-48 h-auto mx-auto">
                       <CircularProgressbar
-                        value={metric.score}
-                        text={`${metric.score}%`}
+                        value={healthData.data.sentiment.overallSentiment}
+                        text={`${Math.round(healthData.data.sentiment.overallSentiment)}%`}
                         styles={buildStyles({
-                          pathColor: metric.color,
+                          pathColor: darkMode 
+                            ? `rgba(147, 197, 253, ${healthData.data.sentiment.overallSentiment / 100})` 
+                            : `rgba(79, 70, 229, ${healthData.data.sentiment.overallSentiment / 100})`,
                           textColor: darkMode ? '#FFFFFF' : '#1F2937',
                           trailColor: darkMode ? '#374151' : '#E5E7EB'
                         })}
                       />
+                      <p className="text-center mt-2 dark:text-white font-semibold">Sentiment Score</p>
                     </div>
-                    <p className="mt-2 font-medium text-gray-900 dark:text-white">{metric.subject}</p>
                   </div>
-                ))}
+
+                  {/* Analysis - 2/3 column */}
+                  <div className="md:col-span-2">
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-semibold text-gray-900 dark:text-white">Brand Perception</h4>
+                        <p className="text-gray-600 dark:text-gray-300">{healthData.data.sentiment.brandPerception}</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-semibold text-gray-900 dark:text-white">Market Position</h4>
+                        <p className="text-gray-600 dark:text-gray-300">{healthData.data.sentiment.marketPosition}</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                          <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Key Strengths</h5>
+                          <ul className="list-disc list-inside space-y-1">
+                            {healthData.data.sentiment.keyStrengths.map((strength, index) => (
+                              <li key={index} className="text-gray-600 dark:text-gray-300">{strength}</li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                          <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Areas of Attention</h5>
+                          <ul className="list-disc list-inside space-y-1">
+                            {healthData.data.sentiment.potentialConcerns.map((concern, index) => (
+                              <li key={index} className="text-gray-600 dark:text-gray-300">{concern}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Debug Information */}
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
+                  <details className="text-sm">
+                    <summary className="text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-white">
+                      View Raw Sentiment Data
+                    </summary>
+                    <pre className="mt-2 bg-gray-50 dark:bg-gray-700 p-4 rounded overflow-auto">
+                      {JSON.stringify(healthData.data.sentiment, null, 2)}
+                    </pre>
+                  </details>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Wikipedia Information */}
             {healthData.data.wiki && (
