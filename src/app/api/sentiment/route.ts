@@ -8,38 +8,74 @@ const openai = new OpenAI({
 export async function POST(request: NextRequest) {
   try {
     const { term, context } = await request.json();
-    console.log('Sentiment Analysis Request:', { term, contextKeys: Object.keys(context) });
-
+    
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4-turbo",
       messages: [
         {
           role: "system",
-          content: `You are a brand sentiment analyzer. Analyze the provided brand information and return a JSON structure with these exact fields:
-            - overallSentiment: number between 0-100
-            - brandPerception: string describing how the brand is perceived
-            - marketPosition: string describing market standing
-            - publicSentiment: string about public opinion
-            - keyStrengths: array of strings listing main strengths
-            - potentialConcerns: array of strings listing concerns
-            
-            Format your response as valid JSON without any additional text.`
+          content: `Analyze brand sentiment and return JSON. Include:
+            {
+              "overallSentiment": 0-100,
+              "brandPerception": "brief perception summary",
+              "marketPosition": "brief position summary",
+              "socialMetrics": {
+                "twitter": { "total": number, "daily": [7 numbers], "trend": "up|down|stable" },
+                "linkedin": { "total": number, "daily": [7 numbers], "trend": "up|down|stable" },
+                "facebook": { "total": number, "daily": [7 numbers], "trend": "up|down|stable" },
+                "totalMentions": number
+              },
+              "socialInsight": "brief social media analysis",
+              "brandReach": "brief reach summary",
+              "keyStrengths": ["3-5 strengths"],
+              "potentialConcerns": ["2-3 concerns"],
+              "competitors": [
+                {
+                  "name": "competitor name",
+                  "type": "direct|indirect|potential",
+                  "sentiment": "higher|lower|similar",
+                  "marketShare": "percentage or unknown",
+                  "strengths": ["1-2 key strengths"],
+                  "description": "brief competitive position"
+                }
+              ]
+            }`
         },
         {
           role: "user",
-          content: `Analyze the brand sentiment for: ${term}. Here is the context: ${JSON.stringify(context)}`
+          content: `Brand: ${term}\nContext: ${JSON.stringify(context)}`
         }
       ],
       temperature: 0.7,
     });
 
     const responseText = completion.choices[0].message.content;
-    console.log('Raw OpenAI Response:', responseText);
-    
+
+    if (!responseText) {
+      throw new Error('No response from OpenAI');
+    }
+
     try {
       const sentimentData = JSON.parse(responseText);
-      console.log('Parsed Sentiment Data:', sentimentData);
-      return NextResponse.json({ sentiment: sentimentData });
+      
+      // Validate the response has required fields
+      if (!sentimentData.overallSentiment || !sentimentData.socialMetrics) {
+        throw new Error('Invalid response structure');
+      }
+
+      // Calculate total mentions if not provided
+      if (!sentimentData.socialMetrics.totalMentions) {
+        sentimentData.socialMetrics.totalMentions = 
+          sentimentData.socialMetrics.twitter.total +
+          sentimentData.socialMetrics.linkedin.total +
+          sentimentData.socialMetrics.facebook.total;
+      }
+
+      return NextResponse.json({ 
+        sentiment: sentimentData,
+        success: true 
+      });
+
     } catch (parseError) {
       console.error('Error parsing OpenAI response:', parseError);
       throw new Error('Failed to parse sentiment analysis response');
@@ -48,8 +84,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error in sentiment API:', error);
     return NextResponse.json({ 
-      error: 'Failed to analyze sentiment.',
-      details: error.message 
+      error: 'Failed to analyze sentiment',
+      details: error instanceof Error ? error.message : 'Unknown error occurred',
+      success: false 
     }, { status: 500 });
   }
 }

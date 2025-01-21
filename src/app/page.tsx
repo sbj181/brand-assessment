@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useHover, useFloating, offset, shift, useInteractions, FloatingPortal } from '@floating-ui/react';
+import ThemeToggle from '@/components/ThemeToggle';
 import { HealthData } from '@/app/types/api'; // Import HealthData type
 import BrandSurvey from '@/app/components/BrandSurvey';
 import { HiSparkles } from 'react-icons/hi';
@@ -145,7 +146,7 @@ export default function BrandHealth() {
           term: term,
           context: {
             wiki: healthData?.data?.wiki?.extract,
-            news: healthData?.data?.news?.articles?.map(a => a.title).join('. '),
+            news: healthData?.data?.news?.articles?.map((article: { title: string }) => article.title).join('. '),
             description: healthData?.data?.ddg?.AbstractText
           }
         }),
@@ -189,7 +190,7 @@ export default function BrandHealth() {
 
   const calculateOverallScore = (data: HealthData) => {
     const baseScore = data.scores.overall;
-    const sentimentScore = data.scores.sentimentScore || 50; // Assume neutral if missing
+    const sentimentScore = data.scores.sentiment || 50; // Assume neutral if missing
     if (!surveyEnabled || surveyScore === null) return baseScore;
 
     // Adjust these weights
@@ -239,7 +240,7 @@ export default function BrandHealth() {
         </div>
 
         {healthData && (
-          <div className="space-y-8 mt-8">
+          <div className="space-y-8 mt-0">
             <div className="block">
              {/*  <label className="text-gray-700 dark:text-gray-300">
                 Enable Survey
@@ -336,6 +337,13 @@ export default function BrandHealth() {
                     </p>
                   </CustomTooltip>
 
+                  <CustomTooltip content="Based on AI analysis of brand sentiment across news, social media, and market data">
+                    <p className="flex items-center text-gray-700 dark:text-gray-300">
+                      🤖 AI Sentiment: {healthData.data.sentiment.overallSentiment}%
+                      <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
+                    </p>
+                  </CustomTooltip>
+
                   {surveyEnabled && (
                     <CustomTooltip content="Based on manual brand assessment responses">
                       <p className="flex items-center text-gray-700 dark:text-gray-300">
@@ -348,53 +356,16 @@ export default function BrandHealth() {
               </div>
             </div>
 
-            {/* Brand Health Metrics */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
-                📊 Brand Health Metrics
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {[
-  { subject: 'Overall Health', score: healthData.scores.overall, color: '#4F46E5' },
-  { subject: 'Sentiment', score: healthData.data.sentiment.overallSentiment, color: '#10B981' }, // Use the sentiment data directly
-  { subject: 'Search Trends', score: healthData.scores.searchTrend, color: '#10B981' },
-  { subject: 'Wikipedia', score: healthData.scores.wikipedia, color: '#F59E0B' },
-  { subject: 'Search Results', score: healthData.scores.searchResults, color: '#EC4899' },
-  { subject: 'News Coverage', score: healthData.scores.newsCoverage, color: '#6366F1' },
-  { subject: 'Wikidata', score: healthData.scores.wikidata, color: '#8B5CF6' },
-  { subject: 'Google Presence', score: healthData.scores.googlePresence, color: '#2563EB' },
-  ...(surveyEnabled && surveyScore !== null ? [
-    { subject: 'Survey Score', score: Math.round(surveyScore), color: '#DC2626' }
-  ] : [])
-].map((metric) => (
-  <div key={metric.subject} className="text-center">
-    <div className="w-32 h-32 mx-auto">
-      <CircularProgressbar
-        value={metric.score}
-        text={`${metric.score}%`}
-        styles={buildStyles({
-          pathColor: metric.color,
-          textColor: darkMode ? '#FFFFFF' : '#1F2937',
-          trailColor: darkMode ? '#374151' : '#E5E7EB'
-        })}
-      />
-    </div>
-    <p className="mt-2 font-medium text-gray-900 dark:text-white">{metric.subject}</p>
-  </div>
-))}
-              </div>
-            </div>
-
             {/* Sentiment Analysis Section */}
             {healthData?.data?.sentiment && (
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow mt-6">
-                <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                <h3 className="font-bold text-gray-900 dark:text-white mb-6 flex items-center">
                   <HiSparkles className="text-blue-500 mr-2" />
                   AI Brand Sentiment Analysis
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  {/* Overall Score - 1/3 column */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Left Column - Overall Score */}
                   <div>
                     <div className="w-48 h-auto mx-auto">
                       <CircularProgressbar
@@ -408,43 +379,208 @@ export default function BrandHealth() {
                           trailColor: darkMode ? '#374151' : '#E5E7EB'
                         })}
                       />
-                      <p className="text-center mt-2 dark:text-white font-semibold">Sentiment Score</p>
+                      <p className="text-center mt-2 dark:text-white font-semibold">Overall Sentiment</p>
+                    </div>
+
+                    {/* Social Media Metrics */}
+                    <div className="mt-6 space-y-4">
+                      {/* Platform Metrics Grid */}
+                      <div className="grid grid-cols-3 gap-4">
+                        {/* Twitter Card */}
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                            Twitter Mentions
+                            {healthData.data.sentiment.socialMetrics?.twitter?.trend && (
+                              <span className={`ml-2 ${healthData.data.sentiment.socialMetrics.twitter.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+                                {healthData.data.sentiment.socialMetrics.twitter.trend === 'up' ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+                            {healthData.data.sentiment.socialMetrics?.twitter?.total?.toLocaleString()}
+                          </div>
+                          <div className="h-16">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart
+                                data={healthData.data.sentiment.socialMetrics?.twitter?.daily.map((value, index) => ({
+                                  name: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][index],
+                                  value: value
+                                }))}
+                                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                              >
+                                <Bar dataKey="value" fill="#1DA1F2" radius={[2, 2, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Last 7 days</div>
+                        </div>
+
+                        {/* LinkedIn Card */}
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                            LinkedIn Mentions
+                            {healthData.data.sentiment.socialMetrics?.linkedin?.trend && (
+                              <span className={`ml-2 ${healthData.data.sentiment.socialMetrics.linkedin.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+                                {healthData.data.sentiment.socialMetrics.linkedin.trend === 'up' ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+                            {healthData.data.sentiment.socialMetrics?.linkedin?.total?.toLocaleString()}
+                          </div>
+                          <div className="h-16">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart
+                                data={healthData.data.sentiment.socialMetrics?.linkedin?.daily.map((value, index) => ({
+                                  name: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][index],
+                                  value: value
+                                }))}
+                                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                              >
+                                <Bar dataKey="value" fill="#0A66C2" radius={[2, 2, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Last 7 days</div>
+                        </div>
+
+                        {/* Facebook Card */}
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                            Facebook Mentions
+                            {healthData.data.sentiment.socialMetrics?.facebook?.trend && (
+                              <span className={`ml-2 ${healthData.data.sentiment.socialMetrics.facebook.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+                                {healthData.data.sentiment.socialMetrics.facebook.trend === 'up' ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+                            {healthData.data.sentiment.socialMetrics?.facebook?.total?.toLocaleString()}
+                          </div>
+                          <div className="h-16">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart
+                                data={healthData.data.sentiment.socialMetrics?.facebook?.daily.map((value, index) => ({
+                                  name: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][index],
+                                  value: value
+                                }))}
+                                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                              >
+                                <Bar dataKey="value" fill="#1877F2" radius={[2, 2, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Last 7 days</div>
+                        </div>
+                      </div>
+
+                      {/* Total Mentions - Full Width Row */}
+                      <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Social Mentions</div>
+                        <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">
+                          {healthData.data.sentiment.socialMetrics?.totalMentions?.toLocaleString()}
+                        </div>
+                        <div className="h-16">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                              data={healthData.data.sentiment.socialMetrics?.twitter?.daily.map((value, index) => ({
+                                name: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][index],
+                                value: value + 
+                                  (healthData.data.sentiment.socialMetrics?.linkedin?.daily[index] || 0) + 
+                                  (healthData.data.sentiment.socialMetrics?.facebook?.daily[index] || 0)
+                              }))}
+                              margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                            >
+                              <Bar dataKey="value" fill="#4F46E5" radius={[2, 2, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Last 7 days</div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Analysis - 2/3 column */}
-                  <div className="md:col-span-2">
-                    <div className="space-y-4">
+                  {/* Middle Column - Brand Analysis */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-white">Brand Perception</h4>
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Brand Perception</h4>
                         <p className="text-gray-600 dark:text-gray-300">{healthData.data.sentiment.brandPerception}</p>
                       </div>
-                      
                       <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-white">Market Position</h4>
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Market Position</h4>
                         <p className="text-gray-600 dark:text-gray-300">{healthData.data.sentiment.marketPosition}</p>
                       </div>
+                    </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                          <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Key Strengths</h5>
-                          <ul className="list-disc list-inside space-y-1">
-                            {healthData.data.sentiment.keyStrengths.map((strength, index) => (
-                              <li key={index} className="text-gray-600 dark:text-gray-300">{strength}</li>
-                            ))}
-                          </ul>
-                        </div>
+                    {/* Social Insights */}
+                    <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Social Media Insights</h4>
+                      <p className="text-gray-600 dark:text-gray-300 mb-4">{healthData.data.sentiment.socialInsight}</p>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Brand Reach</h4>
+                      <p className="text-gray-600 dark:text-gray-300">{healthData.data.sentiment.brandReach}</p>
+                    </div>
 
-                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-                          <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Areas of Attention</h5>
-                          <ul className="list-disc list-inside space-y-1">
-                            {healthData.data.sentiment.potentialConcerns.map((concern, index) => (
-                              <li key={index} className="text-gray-600 dark:text-gray-300">{concern}</li>
-                            ))}
-                          </ul>
-                        </div>
+                    {/* Strengths and Concerns */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                        <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Key Strengths</h5>
+                        <ul className="list-disc list-inside space-y-1">
+                          {healthData.data.sentiment.keyStrengths.map((strength, index) => (
+                            <li key={index} className="text-gray-600 dark:text-gray-300">{strength}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                        <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Areas of Attention</h5>
+                        <ul className="list-disc list-inside space-y-1">
+                          {healthData.data.sentiment.potentialConcerns.map((concern, index) => (
+                            <li key={index} className="text-gray-600 dark:text-gray-300">{concern}</li>
+                          ))}
+                        </ul>
                       </div>
                     </div>
+                    {/* Competitors Section */}
+                    {healthData.data.sentiment.competitors && healthData.data.sentiment.competitors.length > 0 && (
+                      <div className="mt-4 bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+                        <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Key Competitors</h5>
+                        <div className="space-y-3">
+                          {healthData.data.sentiment.competitors.map((competitor, index) => (
+                            <div key={index} className="border-b border-blue-100 dark:border-blue-800 last:border-0 pb-2 last:pb-0">
+                              <div className="flex items-center gap-2">
+                                <h6 className="font-medium text-gray-900 dark:text-white">{competitor.name}</h6>
+                                <span className="text-sm px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-100">
+                                  {competitor.type}
+                                </span>
+                                <span className={`text-sm px-2 py-1 rounded-full ${
+                                  competitor.sentiment === 'higher' ? 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-100' :
+                                  competitor.sentiment === 'lower' ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100' :
+                                  'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'
+                                }`}>
+                                  {competitor.sentiment} sentiment
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{competitor.description}</p>
+                              {competitor.marketShare && competitor.marketShare !== 'unknown' && (
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                  Market Share: {competitor.marketShare}
+                                </p>
+                              )}
+                              {competitor.strengths && competitor.strengths.length > 0 && (
+                                <div className="mt-2">
+                                  <span className="text-sm text-gray-500 dark:text-gray-400">Key Strengths: </span>
+                                  <ul className="list-disc list-inside">
+                                    {competitor.strengths.map((strength, idx) => (
+                                      <li key={idx} className="text-sm text-gray-600 dark:text-gray-300 ml-2">{strength}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -461,6 +597,115 @@ export default function BrandHealth() {
                 </div>
               </div>
             )}
+
+            {/* Website Data Section */}
+            {scrapedData && (
+              <div className="mt-8 bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow">
+                <div className="text-black dark:text-white space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {scrapedData?.metaImage ? (
+    <img 
+      src={scrapedData.metaImage} 
+      alt="Site Preview"
+      className="max-w-full h-auto rounded-lg shadow"
+      onError={(e) => e.currentTarget.style.display = 'none'} 
+    />
+  ) : (
+    <p>No image available.</p>
+  )}
+                    <div className="md:col-span-3">
+                    <h2>Website Data</h2>
+  <p><strong>Title:</strong> {scrapedData?.ogTitle || 'N/A'}</p>
+  <p><strong>Description:</strong> {scrapedData?.ogDescription || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Survey Section */}
+            <BrandSurvey 
+              onScoreUpdate={onScoreUpdate} 
+              isEnabled={surveyEnabled} 
+              brandName={brandTerm} 
+            />
+
+
+            {/* Google Trends Chart */}
+            {healthData?.data?.trends?.default?.timelineData && 
+             healthData.data.trends.default.timelineData.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
+                  🔍 Google Trends - Search Interest Over Time
+                </h3>
+                <div className="h-[400px]">
+                  <ResponsiveContainer>
+                    <LineChart data={healthData.data.trends.default.timelineData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
+                      <XAxis
+                        dataKey="formattedAxisTime"
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                        tick={{ fill: darkMode ? '#9CA3AF' : '#374151' }}
+                      />
+                      <YAxis tick={{ fill: darkMode ? '#9CA3AF' : '#374151' }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: darkMode ? '#1F2937' : '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '0.375rem',
+                          color: darkMode ? '#FFFFFF' : '#000000',
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="value[0]"
+                        stroke="#4F46E5"
+                        strokeWidth={2}
+                        dot={{ fill: '#4F46E5' }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* Brand Health Metrics */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+              <h3 className="font-bold mb-4 text-gray-900 dark:text-white">
+                📊 Brand Health Metrics
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {[
+                  { subject: 'Overall Health', score: healthData.scores.overall, color: '#4F46E5' },
+                  { subject: 'Search Trends', score: healthData.scores.searchTrend, color: '#10B981' },
+                  { subject: 'Wikipedia', score: healthData.scores.wikipedia, color: '#F59E0B' },
+                  { subject: 'Search Results', score: healthData.scores.searchResults, color: '#EC4899' },
+                  { subject: 'News Coverage', score: healthData.scores.newsCoverage, color: '#6366F1' },
+                  { subject: 'Wikidata', score: healthData.scores.wikidata, color: '#8B5CF6' },
+                  { subject: 'AI Sentiment', score: healthData.data.sentiment.overallSentiment, color: '#8B5CF6' },                  { subject: 'Google Presence', score: healthData.scores.googlePresence, color: '#2563EB' },
+                  ...(surveyEnabled && surveyScore !== null ? [
+                    { subject: 'Survey Score', score: Math.round(surveyScore), color: '#DC2626' }
+                  ] : [])
+                ].map((metric) => (
+                  <div key={metric.subject} className="text-center">
+                    <div className="w-32 h-32 mx-auto">
+                      <CircularProgressbar
+                        value={metric.score}
+                        text={`${metric.score}%`}
+                        styles={buildStyles({
+                          pathColor: metric.color,
+                          textColor: darkMode ? '#FFFFFF' : '#1F2937',
+                          trailColor: darkMode ? '#374151' : '#E5E7EB'
+                        })}
+                      />
+                    </div>
+                    <p className="mt-2 font-medium text-gray-900 dark:text-white">{metric.subject}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* Wikipedia Information */}
             {healthData.data.wiki && (
