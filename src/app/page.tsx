@@ -367,20 +367,25 @@ export default function BrandHealth() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   {/* Left Column - Overall Score */}
                   <div>
-                    <div className="w-48 h-auto mx-auto">
-                      <CircularProgressbar
-                        value={healthData.data.sentiment.overallSentiment}
-                        text={`${Math.round(healthData.data.sentiment.overallSentiment)}%`}
-                        styles={buildStyles({
-                          pathColor: darkMode 
-                            ? `rgba(147, 197, 253, ${healthData.data.sentiment.overallSentiment / 100})` 
-                            : `rgba(79, 70, 229, ${healthData.data.sentiment.overallSentiment / 100})`,
-                          textColor: darkMode ? '#FFFFFF' : '#1F2937',
-                          trailColor: darkMode ? '#374151' : '#E5E7EB'
-                        })}
-                      />
-                      <p className="text-center mt-2 dark:text-white font-semibold">Overall Sentiment</p>
-                    </div>
+                  <div className="flex flex-col items-center">
+                        <div className="text-4xl font-bold mb-2 text-gray-900 dark:text-white">
+                          {Math.round(healthData.data.sentiment.overallSentiment)}%
+                        </div>
+                        <div className="w-full max-w-[200px] h-6 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full transition-all duration-500 ease-out rounded-full"
+                            style={{
+                              width: `${healthData.data.sentiment.overallSentiment}%`,
+                              backgroundColor: darkMode 
+                                ? `rgba(147, 197, 253, ${healthData.data.sentiment.overallSentiment / 100})` 
+                                : `rgba(79, 70, 229, ${healthData.data.sentiment.overallSentiment / 100})`
+                            }}
+                          />
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                          AI Sentiment Score
+                        </div>
+                      </div>
 
                     {/* Social Media Metrics */}
                     <div className="mt-6 space-y-4">
