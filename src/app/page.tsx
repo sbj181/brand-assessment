@@ -14,6 +14,8 @@ import Header from '@/components/Header';
 import { useTheme } from 'next-themes';
 import LoadingBar from '@/components/LoadingBar';
 import SentimentVisuals from '@/components/SentimentVisuals';
+import { RiTwitterXFill } from 'react-icons/ri';
+import { FaLinkedin, FaFacebook } from 'react-icons/fa6';
 
 // import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
@@ -206,7 +208,7 @@ export default function BrandHealth() {
       <div className="max-w-6xl mx-auto">
         <Header />
 
-        <form onSubmit={handleSubmit} className="flex gap-4 mb-8">
+        <form onSubmit={handleSubmit} className="flex gap-4 mb-4">
           <input
             type="text"
             value={term}
@@ -272,7 +274,7 @@ export default function BrandHealth() {
 
            
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Overall Score - 1/3 column */}
               <div>
                 <div className="w-48 h-auto mx-auto">
@@ -364,7 +366,7 @@ export default function BrandHealth() {
                   AI Brand Sentiment Analysis
                 </h3>
                 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   {/* Left Column - Overall Score */}
                   <div>
                   <div className="flex flex-col items-center">
@@ -385,23 +387,26 @@ export default function BrandHealth() {
                         <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                           AI Sentiment Score
                         </div>
-                      </div>
+                      </div>  
 
                     {/* Social Media Metrics */}
                     <div className="mt-6 space-y-4">
                       {/* Platform Metrics Grid */}
-                      <div className="grid grid-cols-3 gap-4">
-                        {/* Twitter Card */}
+                      <div className="grid grid-cols-3 gap-3">
+                        {/* Twitter/X Card */}
                         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                            Twitter Mentions
-                            {healthData.data.sentiment.socialMetrics?.twitter?.trend && (
-                              <span className={`ml-2 ${healthData.data.sentiment.socialMetrics.twitter.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
-                                {healthData.data.sentiment.socialMetrics.twitter.trend === 'up' ? '↑' : '↓'}
-                              </span>
-                            )}
+                          <div className="flex flex-col gap-2">
+                            <RiTwitterXFill className="w-6 h-6 text-gray-900 dark:text-white" />
+                            <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                              X Mentions
+                              {healthData.data.sentiment.socialMetrics?.twitter?.trend && (
+                                <span className={`ml-2 ${healthData.data.sentiment.socialMetrics.twitter.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+                                  {healthData.data.sentiment.socialMetrics.twitter.trend === 'up' ? '↑' : '↓'}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+                          <div className="text-lg font-bold text-gray-900 dark:text-white mb-2">
                             {healthData.data.sentiment.socialMetrics?.twitter?.total?.toLocaleString()}
                           </div>
                           <div className="h-16">
@@ -413,7 +418,7 @@ export default function BrandHealth() {
                                 }))}
                                 margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
                               >
-                                <Bar dataKey="value" fill="#1DA1F2" radius={[2, 2, 0, 0]} />
+                                <Bar dataKey="value" className='fill-gray-900' radius={[2, 2, 0, 0]} />
                               </BarChart>
                             </ResponsiveContainer>
                           </div>
@@ -422,15 +427,18 @@ export default function BrandHealth() {
 
                         {/* LinkedIn Card */}
                         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                            LinkedIn Mentions
-                            {healthData.data.sentiment.socialMetrics?.linkedin?.trend && (
-                              <span className={`ml-2 ${healthData.data.sentiment.socialMetrics.linkedin.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
-                                {healthData.data.sentiment.socialMetrics.linkedin.trend === 'up' ? '↑' : '↓'}
-                              </span>
-                            )}
+                          <div className="flex flex-col gap-2">
+                            <FaLinkedin className="w-6 h-6 text-[#0A66C2] dark:text-[#0A66C2]/80" />
+                            <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                              LinkedIn Mentions
+                              {healthData.data.sentiment.socialMetrics?.linkedin?.trend && (
+                                <span className={`ml-2 ${healthData.data.sentiment.socialMetrics.linkedin.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+                                  {healthData.data.sentiment.socialMetrics.linkedin.trend === 'up' ? '↑' : '↓'}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+                          <div className="text-lg font-bold text-[#0A66C2] dark:text-[#0A66C2]/80 mb-2">
                             {healthData.data.sentiment.socialMetrics?.linkedin?.total?.toLocaleString()}
                           </div>
                           <div className="h-16">
@@ -451,15 +459,18 @@ export default function BrandHealth() {
 
                         {/* Facebook Card */}
                         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                            Facebook Mentions
-                            {healthData.data.sentiment.socialMetrics?.facebook?.trend && (
-                              <span className={`ml-2 ${healthData.data.sentiment.socialMetrics.facebook.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
-                                {healthData.data.sentiment.socialMetrics.facebook.trend === 'up' ? '↑' : '↓'}
-                              </span>
-                            )}
+                          <div className="flex flex-col gap-2">
+                            <FaFacebook className="w-6 h-6 text-[#1877F2] dark:text-[#1877F2]/80" />
+                            <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                              Facebook Mentions
+                              {healthData.data.sentiment.socialMetrics?.facebook?.trend && (
+                                <span className={`ml-2 ${healthData.data.sentiment.socialMetrics.facebook.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+                                  {healthData.data.sentiment.socialMetrics.facebook.trend === 'up' ? '↑' : '↓'}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+                          <div className="text-lg font-bold text-[#1877F2] dark:text-[#1877F2]/80 mb-2">
                             {healthData.data.sentiment.socialMetrics?.facebook?.total?.toLocaleString()}
                           </div>
                           <div className="h-16">
@@ -545,6 +556,18 @@ export default function BrandHealth() {
                         </ul>
                       </div>
                     </div>
+
+
+                    {/* Opportunities */}
+                    <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+                      <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Areas of Opportunity</h5>
+                      <ul className="list-disc list-inside space-y-1">
+                        {healthData.data.sentiment.opportunities.map((opportunity, index) => (
+                          <li key={index} className="text-gray-600 dark:text-gray-300">{opportunity}</li>
+                        ))}
+                      </ul>
+                    </div>
+
                     {/* Competitors Section */}
                     {healthData.data.sentiment.competitors && healthData.data.sentiment.competitors.length > 0 && (
                       <div className="mt-4 bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">

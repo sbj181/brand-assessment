@@ -11,7 +11,7 @@ export default function Header() {
       name: 'Brand Health', 
       path: '/', 
       icon: <RiMentalHealthLine className="w-5 h-5" />,
-      ariaLabel: 'Brand Health Assessment'
+      ariaLabel: 'Brand Health Indicator'
     },
     { 
       name: 'XBHI Survey', 
@@ -30,7 +30,7 @@ export default function Header() {
   return (
     <div className="mb-8 space-y-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Brand Health Assessment</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Brand Health Indicator</h1>
         <ThemeToggle />
       </div>
       
