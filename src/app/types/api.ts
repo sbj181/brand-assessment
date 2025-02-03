@@ -23,6 +23,10 @@ export interface TrendsData {
   default: {
     timelineData: TimelineDataPoint[];
     errorMessage?: string;
+    errorDetails?: {
+      timestamp: string;
+      term: string;
+    };
   };
 }
 
@@ -145,6 +149,7 @@ export interface SentimentAnalysis {
   publicSentiment: string;
   keyStrengths: string[];
   potentialConcerns: string[];
+  opportunities: string[];
   analysisBreakdown: {
     socialMedia: SocialMediaMetrics;
     newsMedia: NewsMediaMetrics;
@@ -182,6 +187,7 @@ export interface SentimentResponse {
   brandReach: string;
   keyStrengths: string[];
   potentialConcerns: string[];
+  opportunities: string[];
   competitors?: Array<{
     name: string;
     type: string;
@@ -275,6 +281,7 @@ export interface HealthData {
       brandReach: string;
       keyStrengths: string[];
       potentialConcerns: string[];
+      opportunities: string[];
       competitors: Competitor[];
     };
     term: string;

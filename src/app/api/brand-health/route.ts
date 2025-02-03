@@ -263,41 +263,23 @@ function calculateScores(
   newsData: NewsData | null,
   wikidataData: WikidataResult | null,
   googleData: GoogleSearchScore | null,
-  sentimentData: SentimentAnalysis | null = null
+  sentimentData: SentimentAnalysis | null
 ): Scores {
-  const trendScore = trendsData?.default?.timelineData?.length ?
-    trendsData.default.timelineData.reduce(
-      (acc, point) => acc + (point.value[0] || 0), 0
-    ) / trendsData.default.timelineData.length : 0;
-
-  const wikiScore = wikiData?.extract ? 
-    Math.min(100, wikiData.extract.length / 100) : 0;
-
-  const ddgScore = ddgData?.RelatedTopics?.length ? 
-    Math.min(100, ddgData.RelatedTopics.length * 10) : 0;
-
-  const newsScore = newsData?.articles?.length ? 
-    Math.min(100, newsData.articles.length * 10) : 0;
-
-  const wikidataScore = wikidataData ? 80 : 0;
-
-  const googleScore = googleData?.score || 0;
-
-  // Get the raw sentiment score from OpenAI
-  const sentimentScore = sentimentData?.overallSentiment || 0;
-
-  // Calculate component scores
+  // Calculate individual component scores
   const componentScores = {
-    searchTrend: Math.round(trendScore),
-    wikipedia: Math.round(wikiScore),
-    searchResults: Math.round(ddgScore),
-    newsCoverage: Math.round(newsScore),
-    wikidata: wikidataScore,
-    googlePresence: googleScore,
-    sentiment: Math.round(sentimentScore) // Round for consistency with other components
+    searchTrend: trendsData?.default?.timelineData?.length ?
+      Math.round(trendsData.default.timelineData.reduce(
+        (acc, point) => acc + (point.value?.[0] || 0), 0
+      ) / trendsData.default.timelineData.length) : 0,
+    wikipedia: Math.round(wikiData?.extract ? Math.min(100, wikiData.extract.length / 100) : 0),
+    searchResults: Math.round(ddgData?.RelatedTopics?.length ? Math.min(100, ddgData.RelatedTopics.length * 10) : 0),
+    newsCoverage: Math.round(newsData?.articles?.length ? Math.min(100, newsData.articles.length * 10) : 0),
+    wikidata: wikidataData ? 80 : 0,
+    googlePresence: googleData?.score || 0,
+    sentiment: Math.round(sentimentData?.overallSentiment || 0)
   };
 
-  // Calculate overall score (weighted if needed)
+  // Calculate overall score
   const overall = Math.round(
     (
       componentScores.searchTrend +
@@ -327,7 +309,7 @@ export async function POST(request: NextRequest) {
     }
 
     const [trendsData, wikiData, ddgData, newsData, wikidataData, googleData] = await Promise.all([
-      fetchWithTimeout(() => getTrendsData(term), 5000, 'Google Trends'),
+      fetchWithTimeout(() => getTrendsData(term), 45000, 'Google Trends'),
       fetchWithTimeout(() => getWikipediaData(term), 5000, 'Wikipedia'),
       fetchWithTimeout(() => getDuckDuckGoData(term), 5000, 'DuckDuckGo'),
       fetchWithTimeout(() => getNewsData(term), 5000, 'News API'),
@@ -353,14 +335,14 @@ export async function POST(request: NextRequest) {
       success: true,
       scores,
       data: {
+        searchTerm: term,
         trends: trendsData,
         wiki: wikiData,
         ddg: ddgData,
         news: newsData,
         wikidata: wikidataData,
         google: googleData,
-        sentiment: sentimentData?.sentiment || null,
-        term
+        sentiment: sentimentData
       }
     });
   } catch (error) {

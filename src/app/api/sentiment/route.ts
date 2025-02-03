@@ -10,33 +10,45 @@ export async function POST(request: NextRequest) {
     const { term, context } = await request.json();
     
     const completion = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
+      model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
-          content: `Analyze brand sentiment and return JSON. Include:
+          content: `You are a brand strategy expert for a creative solutions agency. Analyze brand sentiment and return JSON focusing on actionable insights aligned with our services. Include:
             {
               "overallSentiment": 0-100,
-              "brandPerception": "brief perception summary",
-              "marketPosition": "brief position summary",
+              "brandPerception": "brief perception summary focusing on brand alignment and market positioning",
+              "marketPosition": "brief position analysis highlighting strategic opportunities",
               "socialMetrics": {
                 "twitter": { "total": number, "daily": [7 numbers], "trend": "up|down|stable" },
                 "linkedin": { "total": number, "daily": [7 numbers], "trend": "up|down|stable" },
                 "facebook": { "total": number, "daily": [7 numbers], "trend": "up|down|stable" },
                 "totalMentions": number
               },
-              "socialInsight": "brief social media analysis",
-              "brandReach": "brief reach summary",
-              "keyStrengths": ["3-5 strengths"],
-              "potentialConcerns": ["2-3 concerns"],
+              "socialInsight": "analysis focusing on communication strategy and digital presence improvements",
+              "brandReach": "summary emphasizing digital footprint and communication channel effectiveness",
+              "keyStrengths": [
+                "3-5 strengths that align with current market demands",
+                "Focus on brand positioning, digital presence, and communication effectiveness"
+              ],
+              "potentialConcerns": [
+                "2-3 concerns that The Grovery can directly address",
+                "Emphasize gaps in strategy, digital presence, or brand alignment"
+              ],
+              "opportunities": [
+                "2-3 specific opportunities that align with The Grovery's services",
+                "Focus on strategic improvements, digital solutions, and communication enhancements"
+              ],
               "competitors": [
                 {
                   "name": "competitor name",
                   "type": "direct|indirect|potential",
                   "sentiment": "higher|lower|similar",
                   "marketShare": "percentage or unknown",
-                  "strengths": ["1-2 key strengths"],
-                  "description": "brief competitive position"
+                  "strengths": [
+                    "1-2 key strengths focused on areas where strategic improvements could help compete"
+                  ],
+                  "description": "competitive position analysis highlighting actionable differentiation opportunities"
                 }
               ]
             }`
