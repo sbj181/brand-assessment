@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useHover, useFloating, offset, shift, useInteractions, FloatingPortal } from '@floating-ui/react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { HealthData } from '@/app/types/api'; // Import HealthData type
@@ -13,6 +13,9 @@ import { BiLoaderAlt } from 'react-icons/bi';
 import Header from '@/components/Header';
 import { useTheme } from 'next-themes';
 import LoadingBar from '@/components/LoadingBar';
+import SentimentVisuals from '@/components/SentimentVisuals';
+import { RiTwitterXFill } from 'react-icons/ri';
+import { FaLinkedin, FaFacebook } from 'react-icons/fa6';
 
 // import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
@@ -118,73 +121,60 @@ export default function BrandHealth() {
   const handleSearch = async () => {
     setLoading(true);
     setError('');
-    setScrapedData(null);
-    setHealthData(null);
-  
-    const isInputUrl = isUrl(term);
-    console.log('Is URL?', isInputUrl, term);
-  
-    // Set default value for `extractedBrandTerm` based on input term
-    let extractedBrandTerm = term;
   
     try {
-      if (isInputUrl) {
-        console.log('Attempting to scrape URL:', term);
-        // Only scrape if the input is a URL
-        const scrapeResponse = await fetch('/api/scrape', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify({ url: formatTermAsUrl(term) }), // Ensure URL is properly formatted
-        });
-  
-        console.log('Scrape response status:', scrapeResponse.status);
-  
-        if (scrapeResponse.ok) {
-          const scrapeResult = await scrapeResponse.json();
-          console.log('Scrape result:', scrapeResult);
-          
-          setScrapedData(scrapeResult.data);
-          // Extract the brand term using renamed function
-          extractedBrandTerm = extractBrandFromUrl(term, scrapeResult.data);
-          console.log('Extracted brand term:', extractedBrandTerm);
-        } else {
-          const text = await scrapeResponse.text();
-          console.error('Scrape error:', text);
-          throw new Error(`Scraping failed: ${text}`);
-        }
-      }
-  
-      setBrandTerm(extractedBrandTerm); // Update brand term
-  
-      // Proceed with other data fetching steps (e.g., trends, news)
+      // First get the brand health data
       const healthResponse = await fetch('/api/brand-health', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
         },
-        body: JSON.stringify({ term: extractedBrandTerm }),
+        body: JSON.stringify({ term: term }),
       });
-  
-      if (healthResponse.ok) {
-        const healthData = await healthResponse.json();
-        setHealthData(healthData as HealthData);
-      } else {
-        const text = await healthResponse.text();
-        throw new Error(`Unexpected response from server: ${text}`);
+
+      if (!healthResponse.ok) {
+        throw new Error('Failed to fetch health data');
       }
-    } catch (err) {
-      console.error('Error:', err);
-      setError(
-        typeof err === 'string' 
-          ? err 
-          : err instanceof Error 
-            ? err.message 
-            : 'An error occurred'
-      );
+
+      const healthData = await healthResponse.json();
+
+      // Then get sentiment data with context from health data
+      const sentimentResponse = await fetch('/api/sentiment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          term: term,
+          context: {
+            wiki: healthData?.data?.wiki?.extract,
+            news: healthData?.data?.news?.articles?.map((article: { title: string }) => article.title).join('. '),
+            description: healthData?.data?.ddg?.AbstractText
+          }
+        }),
+      });
+
+      if (!sentimentResponse.ok) {
+        throw new Error('Failed to fetch sentiment data');
+      }
+
+      const sentimentData = await sentimentResponse.json();
+
+      // Combine the data
+      const combinedData = {
+        ...healthData,
+        data: {
+          ...healthData.data,
+          sentiment: sentimentData.sentiment
+        }
+      };
+
+      console.log('Combined Data:', combinedData);
+      setHealthData(combinedData);
+
+    } catch (error) {
+      console.error('Search error:', error);
+      setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -202,21 +192,23 @@ export default function BrandHealth() {
 
   const calculateOverallScore = (data: HealthData) => {
     const baseScore = data.scores.overall;
+    const sentimentScore = data.scores.sentiment || 50; // Assume neutral if missing
     if (!surveyEnabled || surveyScore === null) return baseScore;
-    
-    // Adjust these weights based on how much you want the survey to impact the score
-    const SURVEY_WEIGHT = 0.2; // 20% weight to survey
-    const API_WEIGHT = 0.8;    // 80% weight to API data
-    
-    return (baseScore * API_WEIGHT) + (surveyScore * SURVEY_WEIGHT);
-  };
+
+    // Adjust these weights
+    const SURVEY_WEIGHT = 0.15; // 15% weight to manual survey
+    const SENTIMENT_WEIGHT = 0.10; // 10% weight to sentiment analysis
+    const API_WEIGHT = 0.75; // 75% weight to API data
+
+    return baseScore * API_WEIGHT + surveyScore * SURVEY_WEIGHT + sentimentScore * SENTIMENT_WEIGHT;
+  };  
 
   return (
     <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <div className="max-w-6xl mx-auto">
         <Header />
 
-        <form onSubmit={handleSubmit} className="flex gap-4 mb-8">
+        <form onSubmit={handleSubmit} className="flex gap-4 mb-4">
           <input
             type="text"
             value={term}
@@ -250,7 +242,7 @@ export default function BrandHealth() {
         </div>
 
         {healthData && (
-          <div className="space-y-8 mt-8">
+          <div className="space-y-8 mt-0">
             <div className="block">
              {/*  <label className="text-gray-700 dark:text-gray-300">
                 Enable Survey
@@ -282,7 +274,7 @@ export default function BrandHealth() {
 
            
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Overall Score - 1/3 column */}
               <div>
                 <div className="w-48 h-auto mx-auto">
@@ -347,6 +339,13 @@ export default function BrandHealth() {
                     </p>
                   </CustomTooltip>
 
+                  <CustomTooltip content="Based on AI analysis of brand sentiment across news, social media, and market data">
+                    <p className="flex items-center text-gray-700 dark:text-gray-300">
+                      🤖 AI Sentiment: {healthData.data.sentiment.overallSentiment}%
+                      <span className="ml-2 text-gray-400 cursor-help text-sm">ⓘ</span>
+                    </p>
+                  </CustomTooltip>
+
                   {surveyEnabled && (
                     <CustomTooltip content="Based on manual brand assessment responses">
                       <p className="flex items-center text-gray-700 dark:text-gray-300">
@@ -359,29 +358,293 @@ export default function BrandHealth() {
               </div>
             </div>
 
-            
+            {/* Sentiment Analysis Section */}
+            {healthData?.data?.sentiment && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow mt-6">
+                <h3 className="font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+                  <HiSparkles className="text-blue-500 mr-2" />
+                  AI Brand Sentiment Analysis
+                </h3>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {/* Left Column - Overall Score */}
+                  <div>
+                  <div className="flex flex-col items-center">
+                        <div className="text-4xl font-bold mb-2 text-gray-900 dark:text-white">
+                          {Math.round(healthData.data.sentiment.overallSentiment)}%
+                        </div>
+                        <div className="w-full max-w-[200px] h-6 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full transition-all duration-500 ease-out rounded-full"
+                            style={{
+                              width: `${healthData.data.sentiment.overallSentiment}%`,
+                              backgroundColor: darkMode 
+                                ? `rgba(147, 197, 253, ${healthData.data.sentiment.overallSentiment / 100})` 
+                                : `rgba(79, 70, 229, ${healthData.data.sentiment.overallSentiment / 100})`
+                            }}
+                          />
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                          AI Sentiment Score
+                        </div>
+                      </div>  
+
+                    {/* Social Media Metrics */}
+                    <div className="mt-6 space-y-4">
+                      {/* Platform Metrics Grid */}
+                      <div className="grid grid-cols-3 gap-3">
+                        {/* Twitter/X Card */}
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                          <div className="flex flex-col gap-2">
+                            <RiTwitterXFill className="w-6 h-6 text-gray-900 dark:text-white" />
+                            <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                              X Mentions
+                              {healthData.data.sentiment.socialMetrics?.twitter?.trend && (
+                                <span className={`ml-2 ${healthData.data.sentiment.socialMetrics.twitter.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+                                  {healthData.data.sentiment.socialMetrics.twitter.trend === 'up' ? '↑' : '↓'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                            {healthData.data.sentiment.socialMetrics?.twitter?.total?.toLocaleString()}
+                          </div>
+                          <div className="h-16">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart
+                                data={healthData.data.sentiment.socialMetrics?.twitter?.daily.map((value, index) => ({
+                                  name: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][index],
+                                  value: value
+                                }))}
+                                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                              >
+                                <Bar dataKey="value" className='fill-gray-900' radius={[2, 2, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Last 7 days</div>
+                        </div>
+
+                        {/* LinkedIn Card */}
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                          <div className="flex flex-col gap-2">
+                            <FaLinkedin className="w-6 h-6 text-[#0A66C2] dark:text-[#0A66C2]/80" />
+                            <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                              LinkedIn Mentions
+                              {healthData.data.sentiment.socialMetrics?.linkedin?.trend && (
+                                <span className={`ml-2 ${healthData.data.sentiment.socialMetrics.linkedin.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+                                  {healthData.data.sentiment.socialMetrics.linkedin.trend === 'up' ? '↑' : '↓'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-lg font-bold text-[#0A66C2] dark:text-[#0A66C2]/80 mb-2">
+                            {healthData.data.sentiment.socialMetrics?.linkedin?.total?.toLocaleString()}
+                          </div>
+                          <div className="h-16">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart
+                                data={healthData.data.sentiment.socialMetrics?.linkedin?.daily.map((value, index) => ({
+                                  name: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][index],
+                                  value: value
+                                }))}
+                                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                              >
+                                <Bar dataKey="value" fill="#0A66C2" radius={[2, 2, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Last 7 days</div>
+                        </div>
+
+                        {/* Facebook Card */}
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                          <div className="flex flex-col gap-2">
+                            <FaFacebook className="w-6 h-6 text-[#1877F2] dark:text-[#1877F2]/80" />
+                            <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                              Facebook Mentions
+                              {healthData.data.sentiment.socialMetrics?.facebook?.trend && (
+                                <span className={`ml-2 ${healthData.data.sentiment.socialMetrics.facebook.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+                                  {healthData.data.sentiment.socialMetrics.facebook.trend === 'up' ? '↑' : '↓'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-lg font-bold text-[#1877F2] dark:text-[#1877F2]/80 mb-2">
+                            {healthData.data.sentiment.socialMetrics?.facebook?.total?.toLocaleString()}
+                          </div>
+                          <div className="h-16">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart
+                                data={healthData.data.sentiment.socialMetrics?.facebook?.daily.map((value, index) => ({
+                                  name: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][index],
+                                  value: value
+                                }))}
+                                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                              >
+                                <Bar dataKey="value" fill="#1877F2" radius={[2, 2, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Last 7 days</div>
+                        </div>
+                      </div>
+
+                      {/* Total Mentions - Full Width Row */}
+                      <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Social Mentions</div>
+                        <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">
+                          {healthData.data.sentiment.socialMetrics?.totalMentions?.toLocaleString()}
+                        </div>
+                        <div className="h-16">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                              data={healthData.data.sentiment.socialMetrics?.twitter?.daily.map((value, index) => ({
+                                name: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][index],
+                                value: value + 
+                                  (healthData.data.sentiment.socialMetrics?.linkedin?.daily[index] || 0) + 
+                                  (healthData.data.sentiment.socialMetrics?.facebook?.daily[index] || 0)
+                              }))}
+                              margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                            >
+                              <Bar dataKey="value" fill="#4F46E5" radius={[2, 2, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Last 7 days</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Middle Column - Brand Analysis */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Brand Perception</h4>
+                        <p className="text-gray-600 dark:text-gray-300">{healthData.data.sentiment.brandPerception}</p>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Market Position</h4>
+                        <p className="text-gray-600 dark:text-gray-300">{healthData.data.sentiment.marketPosition}</p>
+                      </div>
+                    </div>
+
+                    {/* Social Insights */}
+                    <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Social Media Insights</h4>
+                      <p className="text-gray-600 dark:text-gray-300 mb-4">{healthData.data.sentiment.socialInsight}</p>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Brand Reach</h4>
+                      <p className="text-gray-600 dark:text-gray-300">{healthData.data.sentiment.brandReach}</p>
+                    </div>
+
+                    {/* Strengths and Concerns */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                        <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Key Strengths</h5>
+                        <ul className="list-disc list-inside space-y-1">
+                          {healthData.data.sentiment.keyStrengths.map((strength, index) => (
+                            <li key={index} className="text-gray-600 dark:text-gray-300">{strength}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                        <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Areas of Attention</h5>
+                        <ul className="list-disc list-inside space-y-1">
+                          {healthData.data.sentiment.potentialConcerns.map((concern, index) => (
+                            <li key={index} className="text-gray-600 dark:text-gray-300">{concern}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+
+                    {/* Opportunities */}
+                    <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+                      <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Areas of Opportunity</h5>
+                      <ul className="list-disc list-inside space-y-1">
+                        {healthData.data.sentiment.opportunities.map((opportunity, index) => (
+                          <li key={index} className="text-gray-600 dark:text-gray-300">{opportunity}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Competitors Section */}
+                    {healthData.data.sentiment.competitors && healthData.data.sentiment.competitors.length > 0 && (
+                      <div className="mt-4 bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+                        <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Key Competitors</h5>
+                        <div className="space-y-3">
+                          {healthData.data.sentiment.competitors.map((competitor, index) => (
+                            <div key={index} className="border-b border-blue-100 dark:border-blue-800 last:border-0 pb-2 last:pb-0">
+                              <div className="flex items-center gap-2">
+                                <h6 className="font-medium text-gray-900 dark:text-white">{competitor.name}</h6>
+                                <span className="text-sm px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-100">
+                                  {competitor.type}
+                                </span>
+                                <span className={`text-sm px-2 py-1 rounded-full ${
+                                  competitor.sentiment === 'higher' ? 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-100' :
+                                  competitor.sentiment === 'lower' ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100' :
+                                  'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'
+                                }`}>
+                                  {competitor.sentiment} sentiment
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{competitor.description}</p>
+                              {competitor.marketShare && competitor.marketShare !== 'unknown' && (
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                  Market Share: {competitor.marketShare}
+                                </p>
+                              )}
+                              {competitor.strengths && competitor.strengths.length > 0 && (
+                                <div className="mt-2">
+                                  <span className="text-sm text-gray-500 dark:text-gray-400">Key Strengths: </span>
+                                  <ul className="list-disc list-inside">
+                                    {competitor.strengths.map((strength, idx) => (
+                                      <li key={idx} className="text-sm text-gray-600 dark:text-gray-300 ml-2">{strength}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Debug Information */}
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
+                  <details className="text-sm">
+                    <summary className="text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-white">
+                      View Raw Sentiment Data
+                    </summary>
+                    <pre className="mt-2 bg-gray-50 dark:bg-gray-700 p-4 rounded overflow-auto">
+                      {JSON.stringify(healthData.data.sentiment, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              </div>
+            )}
 
             {/* Website Data Section */}
             {scrapedData && (
               <div className="mt-8 bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow">
                 <div className="text-black dark:text-white space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {scrapedData.metaImage && (
-                      <div className="mb-4 md:mb-0">
-                        <img 
-                          src={scrapedData.metaImage} 
-                          alt="Site Preview"
-                          className="max-w-full h-auto rounded-lg shadow"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
+                  {scrapedData?.metaImage ? (
+    <img 
+      src={scrapedData.metaImage} 
+      alt="Site Preview"
+      className="max-w-full h-auto rounded-lg shadow"
+      onError={(e) => e.currentTarget.style.display = 'none'} 
+    />
+  ) : (
+    <p>No image available.</p>
+  )}
                     <div className="md:col-span-3">
-                      <h2 className="text-lg font-bold mb-2 text-gray-900 dark:text-white">Website Data</h2>
-                      <p><strong>Title:</strong> {scrapedData.ogTitle || 'N/A'}</p>
-                      <p><strong>Description:</strong> {scrapedData.ogDescription || 'N/A'}</p>
+                    <h2>Website Data</h2>
+  <p><strong>Title:</strong> {scrapedData?.ogTitle || 'N/A'}</p>
+  <p><strong>Description:</strong> {scrapedData?.ogDescription || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
@@ -449,7 +712,7 @@ export default function BrandHealth() {
                   { subject: 'Search Results', score: healthData.scores.searchResults, color: '#EC4899' },
                   { subject: 'News Coverage', score: healthData.scores.newsCoverage, color: '#6366F1' },
                   { subject: 'Wikidata', score: healthData.scores.wikidata, color: '#8B5CF6' },
-                  { subject: 'Google Presence', score: healthData.scores.googlePresence, color: '#2563EB' },
+                  { subject: 'AI Sentiment', score: healthData.data.sentiment.overallSentiment, color: '#8B5CF6' },                  { subject: 'Google Presence', score: healthData.scores.googlePresence, color: '#2563EB' },
                   ...(surveyEnabled && surveyScore !== null ? [
                     { subject: 'Survey Score', score: Math.round(surveyScore), color: '#DC2626' }
                   ] : [])

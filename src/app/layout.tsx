@@ -9,7 +9,7 @@ const kumbhSans = Kumbh_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Brand Health Assessment',
+  title: 'Brand Health Indicator',
   description: 'Analyze and assess brand health metrics',
   icons: {
     icon: [
